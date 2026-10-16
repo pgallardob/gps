@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#087f73">
+    <meta name="referrer" content="no-referrer">
+    <meta name="robots" content="noindex, nofollow">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+    <title>Compartir con permiso · Punto</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="assets/icon-180.png">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/deployment.js" defer></script>
+    <script src="js/config.js" defer></script>
+    <script src="js/sharing-client.js" defer></script>
+    <script src="js/share-publisher.js" defer></script>
+    <script src="js/pwa.js" defer></script>
+</head>
+<body>
+    <main class="consent-shell">
+        <a class="brand" href="./">punto<span class="brand-period">.</span></a>
+        <section class="panel consent-card" aria-labelledby="consent-title">
+            <p class="eyebrow">SOLO CON TU PERMISO</p>
+            <h1 id="consent-title">Tú decides si compartir.</h1>
+            <p>Quien te envió esta invitación podrá ver tu posición y su precisión mientras compartas. Confirma por otro medio que conoces y confías en esa persona.</p>
+            <p id="share-duration">La invitación tiene un tiempo de vencimiento limitado.</p>
+            <p class="route-hint">Servicio receptor: <strong id="relay-origin">sin configurar</strong>. El número de teléfono no se usa para obtener el GPS ni verificar tu identidad.</p>
+            <label class="consent-check"><input id="share-consent" type="checkbox"><span>Acepto enviar mi ubicación a quien me invitó durante el tiempo indicado. Puedo detenerla cuando quiera.</span></label>
+            <div class="consent-actions"><button class="button button-primary" id="share-start-btn" type="button" disabled>Aceptar y compartir mi ubicación</button><button class="button button-stop" id="share-stop-btn" type="button" disabled>Detener / rechazar</button></div>
+            <p class="publisher-status" id="publisher-status" role="status">Verificando la invitación. El GPS todavía no se solicita.</p>
+            <p id="publisher-last-update" class="route-hint" role="status"></p>
+            <p class="notice-error">La transmisión se detiene al ocultar o cerrar esta pantalla. No funciona como rastreo continuo con el teléfono bloqueado ni como servicio de emergencia.</p>
+            <p class="route-hint">Se conserva solo la última posición durante la sesión, no un historial. Si se pierde conexión, su visualización y autorización vencen por inactividad. Quien la vea podría copiarla o tomar una captura; revocar no borra esas copias. Si la muestra en un mapa externo, ese proveedor puede inferir la zona visualizada.</p>
+            <a href="./">Volver a mi mapa</a>
+        </section>
+        <section class="install-banner" aria-label="Instalar Punto">
+            <div><strong>También puedes instalar Punto</strong><p id="pwa-status">El mapa necesita internet; la interfaz puede abrirse sin conexión después de la primera visita.</p></div>
+            <button class="button button-outline" id="pwa-install-btn" type="button">Cómo instalar</button>
+            <details id="pwa-help"><summary>Instrucciones para el teléfono</summary><p>Android: abre el enlace HTTPS en Chrome y usa el menú → Instalar aplicación o Añadir a pantalla de inicio. iPhone/iPad: abre el enlace en Safari → Compartir → Añadir a pantalla de inicio. La instalación no concede permiso de ubicación automáticamente.</p></details>
+        </section>
+    </main>
+</body>
+</html>

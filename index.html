@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Explora el mapa, consulta tu ubicación y registra tus recorridos con privacidad.">
+    <meta name="theme-color" content="#087f73">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data: https://tile.openstreetmap.org; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+    <title>Punto · Tu mapa en tiempo real</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="assets/icon-180.png">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="stylesheet" href="vendor/leaflet/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H">
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="vendor/leaflet/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" defer></script>
+    <script src="js/deployment.js" defer></script>
+    <script src="js/config.js" defer></script>
+    <script src="js/geo.js" defer></script>
+    <script src="js/location.js" defer></script>
+    <script src="js/address.js" defer></script>
+    <script src="js/map.js" defer></script>
+    <script src="js/session.js" defer></script>
+    <script src="js/route-files.js" defer></script>
+    <script src="js/qgis.js" defer></script>
+    <script src="js/sharing-client.js" defer></script>
+    <script src="js/sharing.js" defer></script>
+    <script src="js/pwa.js" defer></script>
+    <script src="js/app.js" defer></script>
+</head>
+<body>
+    <svg class="icon-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 11-8 11S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+        <symbol id="i-locate" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></symbol>
+        <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z"/></symbol>
+        <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></symbol>
+        <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></symbol>
+        <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M7 17 17 7M7 7h10v10"/></symbol>
+        <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></symbol>
+        <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/></symbol>
+        <symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="5" r="2"/><circle cx="18" cy="19" r="2"/><path d="M8 5h7a4 4 0 0 1 0 8H9a3 3 0 0 0 0 6h7"/></symbol>
+        <symbol id="i-shield" viewBox="0 0 24 24"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6Z"/><path d="m8 12 3 3 5-6"/></symbol>
+        <symbol id="i-expand" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></symbol>
+    </svg>
+
+    <div class="app-shell">
+        <header class="site-header">
+            <a class="brand" href="./" aria-label="Punto, inicio">
+                <span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg></span>
+                <span>punto<span class="brand-period">.</span></span>
+            </a>
+            <div class="header-meta">
+                <span class="header-caption">TU EXPLORADOR PERSONAL</span>
+                <span class="connection-badge" id="connection-badge"><span class="status-dot"></span><span id="connection-label">En línea</span></span>
+            </div>
+        </header>
+
+        <main>
+            <section class="intro" aria-labelledby="page-title">
+                <div>
+                    <p class="eyebrow">UN PUNTO DE PARTIDA. INFINITAS POSIBILIDADES.</p>
+                    <h1 id="page-title">Tu mundo, <span>en tiempo real.</span></h1>
+                    <p class="intro-copy">Encuentra tu ubicación. Sigue tu camino. Explora a tu ritmo.</p>
+                </div>
+                <span class="session-label"><span class="session-dot"></span> Sesión local</span>
+            </section>
+
+            <section class="install-banner" aria-label="Instalar Punto">
+                <div><strong>Lleva Punto a tu teléfono</strong><p id="pwa-status">Instalable en Android y iPhone desde un enlace HTTPS. La interfaz puede abrirse sin conexión; el mapa y compartir ubicaciones necesitan internet.</p></div>
+                <button class="button button-outline" id="pwa-install-btn" type="button">Cómo instalar</button>
+                <details id="pwa-help"><summary>Instrucciones de instalación</summary><p>Android: abre el enlace seguro en Chrome → menú → Instalar aplicación o Añadir a pantalla de inicio. iPhone/iPad: Safari → Compartir → Añadir a pantalla de inicio. El enlace localhost de tu PC no abre la app en otro equipo. La instalación no activa el GPS ni permite rastrear en segundo plano.</p></details>
+            </section>
+
+            <noscript><p class="notice-error">Activa JavaScript para mostrar el mapa y utilizar el GPS.</p></noscript>
+            <div class="demo-banner" id="demo-banner" role="status" hidden><strong>DEMOSTRACIÓN</strong><span>Coordenadas simuladas, no tu ubicación real. Los archivos exportados también se identifican como demo.</span></div>
+
+            <div class="workspace">
+                <section class="map-card" aria-labelledby="map-title">
+                    <div class="map-toolbar">
+                        <div class="map-title-group">
+                            <h2 id="map-title"><span class="map-indicator"></span> Vista del mapa</h2>
+                            <p id="map-mode">Vista general · explora el mundo</p>
+                        </div>
+                        <label class="follow-toggle"><input type="checkbox" id="follow-toggle" checked><span>Seguir mi ubicación</span></label>
+                    </div>
+                    <div class="map-stage">
+                        <div id="map" aria-label="Mapa interactivo de OpenStreetMap"></div>
+                        <div class="map-notice" id="map-notice" role="status">Cargando el mapa…</div>
+                        <div class="map-actions" aria-label="Controles de vista">
+                            <button class="map-button" id="recenter-btn" type="button" title="Centrar en mi ubicación" aria-label="Centrar en mi ubicación" disabled><svg class="icon" aria-hidden="true"><use href="#i-locate"/></svg></button>
+                            <button class="map-button" id="fit-route-btn" type="button" title="Ver el recorrido completo" aria-label="Ver el recorrido completo" disabled><svg class="icon" aria-hidden="true"><use href="#i-expand"/></svg></button>
+                        </div>
+                    </div>
+                    <div class="map-caption">
+                        <span><span class="legend-dot"></span> Ubicación y área de precisión GPS</span>
+                        <button class="text-button" id="retry-map-btn" type="button" hidden>Reintentar mapa</button>
+                        <a href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noopener noreferrer">Informar un error del mapa ↗</a>
+                    </div>
+                    <div class="metrics" aria-label="Datos del recorrido">
+                        <div class="metric"><span class="metric-label">Distancia recorrida</span><p id="distance">0 <small>m</small></p></div>
+                        <div class="metric"><span class="metric-label">Precisión GPS</span><p id="accuracy">— <small>m</small></p></div>
+                        <div class="metric"><span class="metric-label">Velocidad</span><p id="speed">— <small>km/h</small></p></div>
+                        <div class="metric"><span class="metric-label">Puntos del recorrido</span><p id="point-count">0</p></div>
+                    </div>
+                </section>
+
+                <aside class="sidebar" aria-label="Ubicación y recorrido">
+                    <section class="panel control-panel" aria-labelledby="control-title">
+                        <div class="panel-heading"><span class="eyebrow">PANEL DE CONTROL</span><span class="tracking-badge" id="tracking-badge">En espera</span></div>
+                        <h2 id="control-title">Tu próximo paso empieza aquí.</h2>
+                        <p class="panel-copy">Activa el GPS solo cuando tú quieras.</p>
+                        <button class="button button-outline button-full" id="locate-btn" type="button"><svg class="icon" aria-hidden="true"><use href="#i-locate"/></svg> Obtener mi ubicación</button>
+                        <div class="tracking-actions">
+                            <button class="button button-primary" id="start-btn" type="button"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg> Iniciar rastreo</button>
+                            <button class="button button-stop" id="stop-btn" type="button" disabled><svg class="icon" aria-hidden="true"><use href="#i-stop"/></svg> Detener</button>
+                        </div>
+                        <div class="tracking-status" id="status-box" data-tone="neutral"><span class="status-dot"></span><p id="status" role="status" aria-live="polite">El mapa está listo para explorar. Tu GPS todavía no está activo.</p></div>
+                        <div class="demo-controls"><button class="text-button" id="demo-btn" type="button">Probar demo sin GPS</button><button class="text-button" id="demo-step-btn" type="button" hidden>Avanzar demo</button></div>
+                    </section>
+
+                    <section class="panel position-panel" aria-labelledby="position-title">
+                        <div class="section-heading"><h2 id="position-title">Tu posición</h2><svg class="icon muted-icon" aria-hidden="true"><use href="#i-pin"/></svg></div>
+                        <dl class="coordinates">
+                            <div><dt>LATITUD</dt><dd id="lat">—</dd></div>
+                            <div><dt>LONGITUD</dt><dd id="lon">—</dd></div>
+                        </dl>
+                        <p class="last-update">Última señal: <time id="last-update">sin ubicación</time></p>
+                        <p class="source-label" id="position-source">Sin lectura GPS</p>
+                        <div class="position-actions">
+                            <button class="text-button" id="copy-btn" type="button" disabled><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg> Copiar coordenadas</button>
+                            <a class="text-button" id="external-map-link" target="_blank" rel="noopener noreferrer" hidden>Ver en OSM <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+                        </div>
+                        <details class="address-details">
+                            <summary>Dirección postal <span>opcional</span></summary>
+                            <p id="address">Sin proveedor configurado. Puedes usar el mapa y el GPS sin consultar direcciones.</p>
+                            <button class="text-button" id="address-btn" type="button" disabled>Consultar dirección</button>
+                            <p class="address-privacy">Esta consulta envía las coordenadas al proveedor configurado.</p>
+                        </details>
+                    </section>
+
+                    <section class="panel route-panel" aria-labelledby="route-title">
+                        <div class="section-heading"><h2 id="route-title">Tu recorrido</h2><svg class="icon muted-icon" aria-hidden="true"><use href="#i-route"/></svg></div>
+                        <p class="panel-copy">Los puntos se registran al iniciar el rastreo. Exporta tu recorrido antes de cerrar la página.</p>
+                        <div class="route-actions">
+                            <button class="button button-outline" id="export-btn" type="button" disabled><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg> Exportar recorrido</button>
+                            <button class="button button-icon" id="clear-btn" type="button" title="Borrar recorrido" aria-label="Borrar recorrido" disabled><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>
+                        </div>
+                        <div class="file-controls"><label for="export-format">Formato</label><select id="export-format"><option value="geojson">GeoJSON</option><option value="gpx">GPX</option></select><button class="text-button" id="import-btn" type="button">Importar GeoJSON</button><input id="import-file" type="file" accept=".geojson,.json,application/geo+json,application/json" hidden></div>
+                        <div class="open-with-controls"><span>Abrir con:</span><button class="button button-outline" id="open-qgis-btn" type="button" disabled>QGIS <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button></div>
+                        <p class="route-hint" id="qgis-status" role="status">Comprobando QGIS en este equipo…</p>
+                        <div class="qgis-help"><button class="text-button" id="qgis-check-btn" type="button">Volver a comprobar</button><a class="text-button" id="qgis-install-link" href="https://qgis.org/download/" target="_blank" rel="noopener noreferrer" hidden>Instalar QGIS ↗</a></div>
+                        <p class="route-hint">Abre una copia temporal local en el formato elegido. No reemplaza una exportación de respaldo.</p>
+                        <p class="route-hint">Importación local: máximo 4 MB, 10.000 puntos y 100 favoritos. Nunca se sube el archivo.</p>
+                        <p class="route-hint">Sin unir los tramos entre pausas. Sin guardar tu historial.</p>
+                    </section>
+                </aside>
+
+                <section class="adventure-grid" aria-label="Herramientas de exploración">
+                    <section class="panel" aria-labelledby="goal-title">
+                        <div class="section-heading"><h2 id="goal-title">Tu próxima meta</h2><svg class="icon muted-icon" aria-hidden="true"><use href="#i-route"/></svg></div>
+                        <div class="goal-input"><label for="goal-km">Distancia objetivo</label><input id="goal-km" type="number" min="0.05" max="1000" step="0.05" value="1" inputmode="decimal" required><span>km</span></div>
+                        <progress id="goal-progress" max="100" value="0" aria-label="Progreso de la meta"></progress>
+                        <p class="route-hint" id="goal-label">0 % de tu meta</p>
+                        <dl class="session-stats"><div><dt>Tiempo activo</dt><dd id="elapsed-time">00:00:00</dd></div><div><dt>Media GPS de la sesión</dt><dd id="average-speed">—</dd></div></dl>
+                    </section>
+                    <section class="panel" aria-labelledby="waypoint-title">
+                        <div class="section-heading"><h2 id="waypoint-title">Puntos favoritos <span id="waypoint-count">0/100</span></h2><svg class="icon muted-icon" aria-hidden="true"><use href="#i-pin"/></svg></div>
+                        <label class="field-label" for="waypoint-name">Nombre del punto</label><input class="text-input" id="waypoint-name" type="text" maxlength="80" placeholder="Inicio, mirador, descanso…" autocomplete="off">
+                        <div class="waypoint-actions"><button class="text-button" id="save-waypoint-btn" type="button" disabled>Guardar mi posición</button><button class="text-button" id="pick-waypoint-btn" type="button" aria-pressed="false">Elegir en el mapa</button></div>
+                        <ul class="waypoint-list" id="waypoint-list" aria-label="Puntos guardados"></ul>
+                        <p class="route-hint" id="waypoint-empty">Guarda un lugar o elige un punto del mapa. Se incluye al exportar.</p>
+                    </section>
+                    <section class="panel privacy-panel" aria-labelledby="privacy-title">
+                        <div class="section-heading"><h2 id="privacy-title">Privacidad a tu medida</h2><svg class="icon muted-icon" aria-hidden="true"><use href="#i-shield"/></svg></div>
+                        <label class="privacy-toggle"><input id="pause-map-toggle" type="checkbox"><span>Pausar el mapa externo</span></label>
+                        <p class="route-hint">Detiene nuevas cargas de OpenStreetMap y consultas de dirección. El GPS y los trazos locales siguen funcionando. No borra solicitudes ni cachés anteriores.</p>
+                        <label class="privacy-toggle"><input id="pause-hidden-toggle" type="checkbox" checked><span>Pausar rastreo al ocultar la pestaña</span></label>
+                        <button class="button button-stop button-full" id="forget-btn" type="button">Borrar toda la sesión</button>
+                        <p class="route-hint">Borra de esta página la ubicación, el recorrido y los favoritos. No borra tus descargas, el portapapeles ni las copias abiertas en QGIS.</p>
+                    </section>
+                    <section class="panel sharing-panel" aria-labelledby="sharing-title">
+                        <div class="section-heading"><h2 id="sharing-title">Ubicación por invitación</h2><svg class="icon muted-icon" aria-hidden="true"><use href="#i-shield"/></svg></div>
+                        <p class="panel-copy">Un número no revela el GPS. Crea un enlace y envíalo al contacto: solo aparecerá en el mapa si acepta y mantiene abierta la pantalla de compartir.</p>
+                        <form id="sharing-form" class="sharing-form">
+                            <div><label class="field-label" for="sharing-owner-key">Clave privada del propietario</label><input class="text-input" id="sharing-owner-key" type="password" autocomplete="off" spellcheck="false" required placeholder="No se guarda en el navegador"></div>
+                            <div><label class="field-label" for="sharing-phone">Teléfono del contacto (con código de país)</label><input class="text-input" id="sharing-phone" type="tel" inputmode="tel" autocomplete="off" maxlength="40" required placeholder="+5491123456789"></div>
+                            <div><label class="field-label" for="sharing-minutes">Tiempo máximo</label><select class="text-input" id="sharing-minutes"><option value="5">5 minutos</option><option value="15" selected>15 minutos</option><option value="30">30 minutos</option><option value="60">60 minutos</option></select></div>
+                            <button class="button button-primary" id="sharing-create-btn" type="submit">Crear invitación privada</button>
+                        </form>
+                        <p class="sharing-status" id="sharing-status" role="status">Comprobando la configuración del servicio…</p>
+                        <ul class="sharing-list" id="sharing-list" aria-label="Invitaciones y ubicaciones compartidas"></ul>
+                        <p class="route-hint">El número es solo una etiqueta local, no una identidad verificada, y no se envían mensajes automáticamente. No se guarda historial remoto. Los puntos compartidos no se mezclan con tu recorrido ni se exportan automáticamente. Mantén privada la clave y comparte cada enlace únicamente con su destinatario.</p>
+                    </section>
+                </section>
+            </div>
+
+            <div class="feedback-bar" id="action-feedback" role="status" aria-live="polite" hidden></div>
+
+            <footer class="site-footer">
+                <p><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg> Tu ubicación, bajo tu control. Sin cuentas ni historial automático.</p>
+                <details><summary>Privacidad y ayuda</summary><p>El mapa necesita internet y carga imágenes de OpenStreetMap, que puede conocer las zonas visualizadas. El GPS solo se solicita al pulsar un botón. Los datos de esta página permanecen en memoria; las exportaciones y las copias temporales abiertas en QGIS se guardan en tu equipo. Para usar el GPS, abre la aplicación con <strong>start.bat</strong> o en HTTPS y acepta el permiso del navegador. La precisión depende del dispositivo; no es una herramienta de navegación de seguridad.</p></details>
+            </footer>
+        </main>
+    </div>
+</body>
+</html>

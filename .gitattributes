@@ -1,0 +1,5 @@
+* text=auto eol=lf
+*.png binary
+*.bat text eol=crlf
+# Keep official vendored bytes unchanged: their SHA-384 values are pinned in HTML.
+vendor/leaflet/** -text

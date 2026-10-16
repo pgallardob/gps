@@ -1,0 +1,10 @@
+[
+  "index.html", "share.html", "manifest.webmanifest", "sw.js",
+  "css/styles.css", "assets/favicon.svg", "assets/icon-180.png", "assets/icon-192.png", "assets/icon-512.png",
+  "vendor/leaflet/leaflet.css", "vendor/leaflet/leaflet.js", "vendor/leaflet/LICENSE",
+  "vendor/leaflet/images/layers.png", "vendor/leaflet/images/layers-2x.png",
+  "vendor/leaflet/images/marker-icon.png", "vendor/leaflet/images/marker-icon-2x.png", "vendor/leaflet/images/marker-shadow.png",
+  "js/deployment.js", "js/config.js", "js/geo.js", "js/location.js", "js/address.js", "js/map.js",
+  "js/session.js", "js/route-files.js", "js/qgis.js", "js/sharing-client.js", "js/sharing.js",
+  "js/share-publisher.js", "js/pwa.js", "js/app.js"
+]
