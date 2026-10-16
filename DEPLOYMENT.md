@@ -4,6 +4,8 @@
 
 This repository is `pgallardob/gps`, with workflow-based Pages at **https://pgallardob.github.io/gps/**. Its frontend origin for a future relay allowlist is `https://pgallardob.github.io` (without `/gps/`).
 
+**Continuation checkpoint:** [NEXT_SESSION.md](NEXT_SESSION.md). The owner already has a Render account, but no Render service/plan has been configured or approved by this work. Public sharing remains disabled until the relay is deliberately deployed and its URL connected. Android is the owner's device; native background support must consider iOS too, separately from PWA hosting.
+
 ## 1. Publish the PWA
 
 1. Put this project in your GitHub repository. Keep real `.env` files, owner keys, exports and location data out of Git. Publishing occurs only when you explicitly push or dispatch the workflow.

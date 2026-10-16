@@ -2,6 +2,8 @@
 
 This ASGI service relays **only the latest consented position** between a visible sender and viewer. It cannot locate a phone number. It is independent of GitHub Pages and has no native QGIS/program-execution code.
 
+**Deployment is pending.** The owner confirmed a Render account; service access, plan/cost approval, HTTPS/proxy configuration and the frontend connection are the next session's work. Resume from [NEXT_SESSION.md](../NEXT_SESSION.md); do not deploy or remove the current session limits as part of saving this checkpoint.
+
 ## Required configuration
 
 | Environment variable | Value |

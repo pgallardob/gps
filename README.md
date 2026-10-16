@@ -4,6 +4,8 @@ The map opens immediately, without requesting location permission. Locate yourse
 
 GitHub Pages URL: **https://pgallardob.github.io/gps/**. The Pages workflow publishes the public PWA; optional cross-device sharing still requires its separate HTTPS relay configuration.
 
+**Continue development:** [NEXT_SESSION.md](NEXT_SESSION.md) records the Render/mobile checkpoint, confirmed account availability, pending approvals and next steps.
+
 ## Open the app
 
 On Windows, double-click **`start.bat`**. Python 3 must be installed. Keep the terminal open while using the app.
