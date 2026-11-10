@@ -10,7 +10,7 @@
 | Relay | https://gps-lj9l.onrender.com — owner-created Free Render service; public build already contains its URL |
 | Secrets | Owner key stays in Render and the owner's runtime browser entry; never in a build variable, native app, chat or private invitation URL |
 | Browser publisher | Foreground-only; startup errors identify GPS/accept/upload and allow deliberate GPS retry only before acceptance |
-| Android | Separate Kotlin foreground-location sender; [native verification workflow](https://github.com/pgallardob/gps/actions/workflows/android.yml) must pass unit/lint/emulator/HTTP checks before a preview APK is offered |
+| Android | Separate Kotlin foreground-location sender; [run 42903931697](https://github.com/pgallardob/gps/actions/runs/42903931697) passed compilation/unit/lint/screen-off emulator/HTTP checks and produced a preview APK; physical-device validation follows |
 | iOS | Native background sender is **not implemented**, explicitly deferred by owner; foreground PWA remains available |
 | Health checks | [Scheduled/manual workflow](https://github.com/pgallardob/gps/actions/workflows/relay-health.yml), nominal max 14-minute gaps; best-effort, not always-on service |
 

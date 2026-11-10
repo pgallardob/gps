@@ -21,6 +21,8 @@ The app accepts only this project's HTTPS invitation origin/path and uses a fixe
 
 ## Verification and build
 
+[Verification run 42903931697](https://github.com/pgallardob/gps/actions/runs/42903931697) passed compilation, JVM tests, lint, the API 35 screen-off/notification-Stop emulator test and HTTP trace checks for native source `d38f214`. It produced the live-endpoint preview APK. This is synthetic/emulator evidence, not a physical-device result; use the latest successful run for later code revisions.
+
 The workflow pins Java 17, Gradle 8.13, AGP 8.12.0 and Kotlin 2.3.0. It uses standard public Ubuntu 24.04 runners, basic GitHub caching, no paid Gradle service, no signing account and no real GPS or secrets. The Android SDK is installed only on the disposable runner, not the owner's Windows PC. Compiler/test failures publish bounded, redacted annotations so diagnosis does not require collecting credentials or exposing environment dumps.
 
 JVM tests exercise link/target validation, monotonic expiry/cancellation, bounded responses, real HTTP, headers/consent bodies, redirects and timeouts. The emulator uses a separate `simulation` application ID, loopback-only HTTP endpoint and synthetic location providers. It backgrounds the activity, verifies the screen is off, checks repeated uploads, invokes the actual notification Stop action and checks the HTTP trace for uploads after Stop.
