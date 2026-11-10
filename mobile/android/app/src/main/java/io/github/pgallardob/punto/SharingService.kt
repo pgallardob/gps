@@ -185,9 +185,9 @@ class SharingService : Service(), LocationListener {
     private fun stopLocal() {
         gate.stop()
         handler.removeCallbacksAndMessages(null)
-        try { locations.removeUpdates(this) } catch (_: SecurityException) {}
+        runCatching { locations.removeUpdates(this) }
         latest.set(null)
-        wakeLock?.let { if (it.isHeld) it.release() }
+        wakeLock?.let { runCatching { if (it.isHeld) it.release() } }
         wakeLock = null
         api.cancelInFlight()
     }

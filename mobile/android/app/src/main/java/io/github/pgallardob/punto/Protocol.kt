@@ -136,7 +136,7 @@ class RelayApi(
         catch (_: SocketTimeoutException) { throw ShareFailure("network_timeout", step) }
         catch (_: java.io.IOException) { throw ShareFailure("network_error", step) }
         catch (_: Exception) { throw ShareFailure("invalid_response", step) }
-        finally { inFlight.compareAndSet(connection, null); connection.disconnect() }
+        finally { inFlight.compareAndSet(connection, null); runCatching { connection.disconnect() } }
     }
     fun cancelInFlight() { canceled.set(true); runCatching { inFlight.get()?.disconnect() } }
     fun preview(invitation: Invitation): Preview {
