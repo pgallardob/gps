@@ -62,6 +62,7 @@ function fixture(overrides = {}) {
     const calls = [];
     const fixes = [];
     const states = [];
+    const details = [];
     const timers = [];
     const client = {
         preview: async () => ({ ...view }),
@@ -69,9 +70,9 @@ function fixture(overrides = {}) {
         publish: async () => { calls.push("publish"); return { accepted: true }; },
         revoke: async () => { calls.push("revoke"); return { stopped: true }; }
     };
-    const publisher = new Publisher({ client, geolocation: { getCurrentPosition(success, error) { fixes.push({ success, error }); } },
-        onState: state => states.push(state), setTimer: callback => { timers.push(callback); return timers.length; }, clearTimer: () => {}, now: () => 0, ...overrides });
-    return { publisher, client, calls, fixes, states, timers };
+    const publisher = new Publisher({ client, geolocation: { getCurrentPosition(success, error, options) { fixes.push({ success, error, options }); } },
+        onState: (state, detail) => { states.push(state); details.push(detail); }, setTimer: callback => { timers.push(callback); return timers.length; }, clearTimer: () => {}, now: () => 0, ...overrides });
+    return { publisher, client, calls, fixes, states, details, timers };
 }
 const gps = { coords: { latitude: 40, longitude: -3, accuracy: 10 } };
 
@@ -132,6 +133,76 @@ test("denied GPS permission sends nothing and permits a deliberate retry", async
     assert.deepEqual(f.calls, []);
     assert.equal(f.publisher.busy, false);
     assert.equal(f.states.at(-1), "permission");
+});
+
+test("a slow first GPS fix has a bounded longer deadline and can be retried before acceptance", async () => {
+    const f = fixture();
+    await f.publisher.load({ id, token });
+    const pending = f.publisher.start(true);
+    f.fixes[0].error({ code: 3 });
+    await pending;
+    assert.equal(f.fixes[0].options.timeout, 30000);
+    assert.equal(f.states.at(-1), "gps_timeout");
+    assert.deepEqual(f.details.at(-1), { stage: "locating", retryable: true });
+    assert.deepEqual(f.calls, []);
+    const retry = f.publisher.start(true);
+    f.fixes[1].success(gps);
+    await retry;
+    assert.deepEqual(f.calls, ["accept", "publish"]);
+    await f.publisher.stop();
+});
+
+test("unavailable GPS is distinguished from a timeout without consuming the invitation", async () => {
+    const f = fixture();
+    await f.publisher.load({ id, token });
+    const pending = f.publisher.start(true);
+    f.fixes[0].error({ code: 2 });
+    await pending;
+    assert.equal(f.states.at(-1), "gps_unavailable");
+    assert.equal(f.details.at(-1).retryable, true);
+    assert.equal(f.publisher.busy, false);
+    assert.deepEqual(f.calls, []);
+});
+
+test("an acceptance timeout is identified and revokes instead of reusing an uncertain capability", async () => {
+    const f = fixture();
+    f.client.accept = async () => { f.calls.push("accept"); throw new DOMException("Aborted", "AbortError"); };
+    await f.publisher.load({ id, token });
+    const pending = f.publisher.start(true);
+    f.fixes[0].success(gps);
+    await pending;
+    assert.equal(f.states.at(-1), "network_timeout");
+    assert.deepEqual(f.details.at(-1), { stage: "accepting", retryable: false, confirmed: true });
+    assert.deepEqual(f.calls, ["accept", "revoke"]);
+    assert.equal(f.publisher.running, false);
+});
+
+test("a failed first upload reports its stage and confirms revocation", async () => {
+    const f = fixture();
+    f.client.publish = async () => { f.calls.push("publish"); throw new TypeError("Connection closed"); };
+    await f.publisher.load({ id, token });
+    const pending = f.publisher.start(true);
+    f.fixes[0].success(gps);
+    await pending;
+    assert.equal(f.states.at(-1), "network_error");
+    assert.deepEqual(f.details.at(-1), { stage: "publishing", retryable: false, confirmed: true });
+    assert.deepEqual(f.calls, ["accept", "publish", "revoke"]);
+    assert.equal(f.publisher.running, false);
+});
+
+test("periodic GPS keeps its shorter deadline and cannot retry an already accepted invitation", async () => {
+    const f = fixture();
+    await f.publisher.load({ id, token });
+    const starting = f.publisher.start(true);
+    f.fixes[0].success(gps);
+    await starting;
+    const updating = f.publisher.tick();
+    f.fixes[1].error({ code: 3 });
+    await updating;
+    assert.equal(f.fixes[1].options.timeout, 10000);
+    assert.equal(f.states.at(-1), "gps_timeout");
+    assert.deepEqual(f.details.at(-1), { stage: "locating", retryable: false, confirmed: true });
+    assert.equal(f.publisher.running, false);
 });
 
 test("hidden screens stop publishing instead of maintaining a background location feed", async () => {

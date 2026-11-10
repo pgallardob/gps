@@ -3,6 +3,12 @@
 
     const sharing = typeof module === "object" && module.exports ? require("./sharing-client.js") : root.PuntoSharing;
 
+    function failureCode(error, stage) {
+        if (error && error.name === "AbortError") return "network_timeout";
+        if (error && error.name === "TypeError" && stage !== "locating") return "network_error";
+        return error && error.message || "request_failed";
+    }
+
     class Publisher {
         constructor({ client, geolocation, onState = () => {}, onPoint = () => {}, hidden = () => false,
             setTimer = (callback, delay) => root.setInterval(callback, delay), clearTimer = timer => root.clearInterval(timer), now = () => performance.now() }) {
@@ -32,13 +38,14 @@
             return preview;
         }
 
-        fix() {
+        fix(timeout = 10000) {
             if (!this.geolocation) return Promise.reject(new Error("unsupported"));
             return new Promise((resolve, reject) => this.geolocation.getCurrentPosition(position => {
                 const point = position && position.coords;
                 if (!sharing.validPosition(point)) reject(new Error("invalid_position"));
                 else resolve({ latitude: point.latitude, longitude: point.longitude, accuracy: point.accuracy });
-            }, error => reject(new Error(error.code === 1 ? "permission" : "gps_error")), { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }));
+            }, error => reject(new Error({ 1: "permission", 2: "gps_unavailable", 3: "gps_timeout" }[error.code] || "gps_error")),
+            { enableHighAccuracy: true, maximumAge: 0, timeout }));
         }
 
         async start(consent) {
@@ -47,11 +54,14 @@
             const token = ++this.generation;
             const invitation = this.invitation;
             let acceptAttempted = false;
+            let stage = "locating";
             this.busy = true;
             this.onState("locating");
             try {
-                const point = await this.fix();
+                // A first GPS fix may be slow; periodic fixes keep their shorter lease-safe deadline.
+                const point = await this.fix(30000);
                 if (token !== this.generation || this.hidden()) return;
+                stage = "accepting";
                 acceptAttempted = true;
                 const acceptance = await this.client.accept(invitation.id, invitation.token);
                 if (token !== this.generation || this.hidden()) {
@@ -61,6 +71,7 @@
                 this.publisher = acceptance.publisherToken;
                 this.deadline = this.now() + acceptance.remainingSeconds * 1000;
                 this.running = true;
+                stage = "publishing";
                 await this.client.publish(invitation.id, this.publisher, point);
                 if (token !== this.generation) return;
                 this.onState("active", acceptance);
@@ -68,8 +79,9 @@
                 this.timer = this.setTimer(() => this.tick(), 10000);
             } catch (error) {
                 if (token !== this.generation) return;
-                if (acceptAttempted) await this.stop(error.message);
-                else { this.busy = false; this.onState(error.message); }
+                const code = failureCode(error, stage);
+                if (acceptAttempted) await this.stop(code, { stage, retryable: false });
+                else { this.busy = false; this.onState(code, { stage, retryable: true }); }
             } finally { if (token === this.generation) this.busy = false; }
         }
 
@@ -78,16 +90,18 @@
             if (this.hidden() || this.now() >= this.deadline) { await this.stop(this.hidden() ? "hidden" : "expired"); return; }
             const token = this.generation;
             this.busy = true;
+            let stage = "locating";
             try {
                 const point = await this.fix();
                 if (token !== this.generation || !this.running || this.hidden()) return;
+                stage = "publishing";
                 await this.client.publish(this.invitation.id, this.publisher, point);
                 if (token === this.generation) this.onPoint(point);
-            } catch (error) { if (token === this.generation) await this.stop(error.message); }
+            } catch (error) { if (token === this.generation) await this.stop(failureCode(error, stage), { stage, retryable: false }); }
             finally { if (token === this.generation) this.busy = false; }
         }
 
-        async stop(reason = "stopped") {
+        async stop(reason = "stopped", detail = {}) {
             const token = ++this.generation;
             const timer = this.timer;
             this.timer = null;
@@ -96,11 +110,11 @@
             const invitation = this.invitation;
             const capability = this.publisher || (invitation && invitation.token);
             this.publisher = null;
-            this.onState(reason, { confirmed: false });
+            this.onState(reason, { ...detail, confirmed: false });
             if (invitation && capability) {
                 try {
                     await this.client.revoke(invitation.id, capability, true);
-                    if (token === this.generation) this.onState(reason, { confirmed: true });
+                    if (token === this.generation) this.onState(reason, { ...detail, confirmed: true });
                 } catch { /* Server freshness and expiry limits apply if revocation cannot reach it. */ }
             }
         }
@@ -128,16 +142,27 @@
                 locating: "Buscando tu posición. Puedes cancelar; aún no se está transmitiendo.",
                 active: "Estás compartiendo tu ubicación. Mantén esta pantalla abierta y visible.",
                 stopped: "GPS detenido. No se enviarán más posiciones.", hidden: "Compartir se detuvo al ocultar esta pantalla.",
-                expired: "El tiempo de compartir terminó.", permission: "No diste permiso de ubicación. No se envió ninguna posición; puedes revisar el permiso y volver a intentar.",
+                expired: "El tiempo de compartir terminó.", permission: "El navegador no tiene permiso para obtener la ubicación.",
                 consent_required: "Marca la casilla de consentimiento antes de continuar.", unsupported: "Este navegador no dispone de GPS.",
+                gps_timeout: "El GPS tardó demasiado en obtener una posición.",
+                gps_unavailable: "El dispositivo no pudo obtener una ubicación. Comprueba que la ubicación esté activada.",
+                gps_error: "El dispositivo no pudo completar la lectura del GPS.", invalid_position: "El GPS devolvió una posición no válida.",
+                network_timeout: "El servicio de compartir no respondió a tiempo.", network_error: "No se pudo conectar con el servicio de compartir.",
+                invalid_response: "El servicio devolvió una respuesta no válida.", request_failed: "El servicio rechazó la solicitud.",
+                rate_limit: "El servicio recibió demasiadas solicitudes. Espera antes de volver a compartir.",
+                unauthorized: "El servicio no autorizó esta invitación.", not_found: "La invitación ya no existe en el servicio.",
                 viewer_offline: "La persona que te invitó no está conectada. Pídele que abra su mapa y envíe otra invitación.",
                 invitation_used: "Esta invitación ya fue utilizada. Solicita un enlace nuevo.",
                 closed: "La invitación terminó o fue revocada.", disconnected: "La conexión de compartir terminó. Solicita una invitación nueva."
             };
             status.textContent = messages[state] || "Se detuvo la transmisión por un error de GPS o conexión. No se enviarán más posiciones.";
-            if (["stopped", "hidden", "expired"].includes(state)) status.textContent += detail.confirmed ? " El servicio confirmó la revocación." : " La revocación remota se intenta; si no hay conexión, vence por tiempo de inactividad.";
-            if (state === "ready") ready = true;
-            if (!["ready", "permission", "unsupported", "consent_required", "locating", "active"].includes(state)) ready = false;
+            const stage = { locating: "obtener ubicación", accepting: "aceptar invitación", publishing: "enviar posición" }[detail.stage];
+            if (stage) status.textContent += ` Etapa: ${stage}.`;
+            if (detail.retryable) status.textContent += " Puedes volver a intentarlo. No se aceptó la invitación ni se envió una posición.";
+            else if (stage) status.textContent += " Solicita una invitación nueva para volver a compartir.";
+            if (["stopped", "hidden", "expired"].includes(state) || stage && !detail.retryable) status.textContent += detail.confirmed ? " El servicio confirmó la revocación." : " La revocación remota se intenta; si no hay conexión, vence por tiempo de inactividad.";
+            if (state === "ready" || detail.retryable) ready = true;
+            else if (!["consent_required", "locating", "active"].includes(state)) ready = false;
             start.disabled = !ready || publisher.running || publisher.busy || !consent.checked;
             stop.disabled = !(publisher.running || publisher.busy || ready);
             document.body.dataset.sharing = state === "active" ? "active" : "idle";

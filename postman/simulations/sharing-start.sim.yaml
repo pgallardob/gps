@@ -1,0 +1,5 @@
+simulation: sharing-start
+routing: path
+mocks:
+  - routeKey: relay
+    path: ../mocks/sharing-relay/config.yaml

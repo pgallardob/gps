@@ -115,6 +115,8 @@ Use HTTPS; plain HTTP is accepted only for loopback providers. Userinfo credenti
 
 ## Verify
 
+Sharing startup errors identify whether obtaining GPS, accepting the invitation or uploading failed. The first GPS fix has a bounded 30-second allowance; periodic fixes retain their 10-second limit. Only a GPS failure before acceptance allows a deliberate retry with the pending invitation. Failures after acceptance still stop and attempt revocation, and require a new invitation. See [the local HTTP regression](postman/README.md) for synthetic transport tests.
+
 With Node.js 18 or later:
 
 ```powershell

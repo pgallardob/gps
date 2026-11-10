@@ -1,0 +1,10 @@
+version: 1
+name: sharing-relay-contract
+slug: sharing-relay-contract
+protocol: http
+port: 4500
+interceptRequests: true
+scenarios:
+  - name: default
+    path: ./default.js
+    default: true
