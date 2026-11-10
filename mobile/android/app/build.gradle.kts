@@ -37,12 +37,15 @@ android {
     }
     testOptions {
         animationsDisabled = true
-        // Android's native HTTP stack allows Origin; desktop JDK restricts it by default.
-        unitTests.all { it.systemProperty("sun.net.http.allowRestrictedHeaders", "true") }
     }
 }
 
 kotlin { compilerOptions { jvmTarget.set(JvmTarget.JVM_17) } }
+
+// Android's native HTTP stack allows Origin; desktop JDK restricts it by default.
+tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+    systemProperty("sun.net.http.allowRestrictedHeaders", "true")
+}
 
 dependencies {
     testImplementation("junit:junit:4.13.2")

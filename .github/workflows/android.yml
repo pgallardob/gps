@@ -5,6 +5,7 @@ on:
     paths:
       - 'mobile/android/**'
       - 'scripts/check_android_trace.py'
+      - 'scripts/annotate_android_failure.py'
       - 'postman/mocks/sharing-relay/**'
       - 'postman/simulations/sharing-start.sim.yaml'
       - '.github/workflows/android.yml'
@@ -19,7 +20,7 @@ concurrency:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -42,7 +43,9 @@ jobs:
       - name: Install the compile platform on the disposable runner
         run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;35.0.0"'
       - name: Compile, unit-test and lint
-        run: gradle -p mobile/android --no-daemon testLiveDebugUnitTest lintLiveDebug assembleLiveDebug assembleSimulationDebugAndroidTest
+        run: |
+          set -o pipefail
+          gradle -p mobile/android --no-daemon --console=plain testLiveDebugUnitTest lintLiveDebug assembleLiveDebug assembleSimulationDebugAndroidTest 2>&1 | tee "$RUNNER_TEMP/android-build.log"
       - name: Install the local-only simulation CLI
         run: npm install --global postman-cli@1.75.0
       - name: Enable hardware acceleration on the disposable runner
@@ -68,8 +71,11 @@ jobs:
               sleep 1
             done
             test "$ready" = true
-            gradle -p mobile/android --no-daemon connectedSimulationDebugAndroidTest
+            gradle -p mobile/android --no-daemon --console=plain connectedSimulationDebugAndroidTest 2>&1 | tee "$RUNNER_TEMP/android-connected.log"
             python scripts/check_android_trace.py "$RUNNER_TEMP/android-relay.ndjson"
+      - name: Publish sanitized failure annotations
+        if: failure()
+        run: python scripts/annotate_android_failure.py
       - name: Upload only the live-endpoint preview APK after all checks pass
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -87,5 +93,7 @@ jobs:
             mobile/android/app/build/outputs/androidTest-results/
             ${{ runner.temp }}/android-relay.ndjson
             ${{ runner.temp }}/android-relay.err
+            ${{ runner.temp }}/android-build.log
+            ${{ runner.temp }}/android-connected.log
           if-no-files-found: ignore
           retention-days: 3

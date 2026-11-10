@@ -71,6 +71,12 @@ class SharingService : Service(), LocationListener {
             return START_NOT_STICKY
         }
         notifications.createNotificationChannel(NotificationChannel(CHANNEL, "Ubicación compartida", NotificationManager.IMPORTANCE_LOW))
+        if (!notificationsAllowed()) {
+            invitation = null
+            SessionStatus.update(Snapshot(false, "Activa el canal de notificaciones de ubicación antes de compartir.", pending.id))
+            stopSelf()
+            return START_NOT_STICKY
+        }
         try {
             val notice = notification("Preparando ubicación. Puedes detenerla aquí.")
             if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION_ID, notice, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
@@ -97,6 +103,12 @@ class SharingService : Service(), LocationListener {
             .setContentTitle("Punto: ubicación compartida").setContentText(text).setContentIntent(open)
             .setOngoing(true).setCategory(Notification.CATEGORY_SERVICE)
             .addAction(Notification.Action.Builder(null, "Detener", stop).build()).build()
+    }
+
+    private fun notificationsAllowed(): Boolean {
+        val channel = notifications.getNotificationChannel(CHANNEL) ?: return false
+        return notifications.areNotificationsEnabled() && channel.importance != NotificationManager.IMPORTANCE_NONE &&
+            (Build.VERSION.SDK_INT < 33 || checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED)
     }
 
     private fun update(text: String) {
@@ -152,6 +164,7 @@ class SharingService : Service(), LocationListener {
     private fun upload() {
         try {
             gate.check()
+            if (!notificationsAllowed()) throw ShareFailure("permission", Step.STOP)
             val pending = invitation ?: throw ShareFailure("stopped", Step.STOP)
             val capability = publisher ?: throw ShareFailure("closed", Step.PUBLISH)
             val point = latest.get() ?: throw ShareFailure("gps_unavailable", Step.LOCATION)
@@ -169,12 +182,12 @@ class SharingService : Service(), LocationListener {
 
     private fun stopLocal() {
         gate.stop()
-        api.cancelInFlight()
         handler.removeCallbacksAndMessages(null)
         try { locations.removeUpdates(this) } catch (_: SecurityException) {}
         latest.set(null)
         wakeLock?.let { if (it.isHeld) it.release() }
         wakeLock = null
+        api.cancelInFlight()
     }
 
     private fun stopSharing(message: String, revoke: Boolean) {

@@ -16,6 +16,9 @@ NS = "{http://schemas.android.com/apk/res/android}"
 SPEC = importlib.util.spec_from_file_location("android_trace", ROOT / "scripts/check_android_trace.py")
 trace = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(trace)
+REPORT_SPEC = importlib.util.spec_from_file_location("android_annotations", ROOT / "scripts/annotate_android_failure.py")
+reporter = importlib.util.module_from_spec(REPORT_SPEC)
+REPORT_SPEC.loader.exec_module(reporter)
 
 
 class AndroidContractTests(unittest.TestCase):
@@ -65,6 +68,18 @@ class AndroidContractTests(unittest.TestCase):
             file.write_text("\n".join(map(json.dumps, events)), encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "after Stop"):
                 trace.verify(file)
+
+    def test_diagnostic_annotations_redact_credentials_and_escape_commands(self):
+        text = 'Bearer private-header {"publisherToken":"private-json", "PUNTO_OWNER_KEY":"private-owner"} #invite=private-link'
+        safe = reporter.sanitize(text)
+        for secret in ("private-header", "private-json", "private-owner", "private-link"):
+            self.assertNotIn(secret, safe)
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            reporter.emit("compiler failure\n::warning::unexpected%")
+        self.assertEqual(len(output.getvalue().splitlines()), 1)
+        self.assertIn("%0A", output.getvalue())
+        self.assertIn("%25", output.getvalue())
 
 
 if __name__ == "__main__":
