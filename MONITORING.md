@@ -6,7 +6,7 @@ The public PWA is already connected to `https://gps-lj9l.onrender.com`. The chec
 
 `.github/workflows/relay-health.yml` reads the existing **repository variable** `PUNTO_SHARING_API_URL`. Do not supply an owner key or any secret. The Python entry point accepts only this project's public HTTPS origin, refuses redirects, bounds response size, requires exactly `{"ok":true}`, and fails the job when two attempts fail. A socket operation can wait up to 90 seconds; the job has a four-minute hard limit.
 
-The schedule is **03, 17, 31, 45 and 59 minutes of each UTC hour**. Its nominal gaps are 14 minutes, except the four-minute gap across the hour. It avoids the busier beginning of each hour. `workflow_dispatch` also enables a manual **Run workflow** test.
+The schedule is **03, 17, 31, 45 and 59 minutes of each UTC hour**. Its nominal gaps are 14 minutes, except the four-minute gap across the hour. It avoids the busier beginning of each hour. Publishing checker/workflow changes to `main` performs an initial check; `workflow_dispatch` also enables a manual **Run workflow** test.
 
 **This is best-effort monitoring/warming, not an always-on guarantee.** GitHub can delay or drop scheduled jobs and disables scheduled workflows after 60 days without repository activity. Render Free can therefore still sleep; its shared workspace-hour allowance and restart/session-loss limitations still apply. Active sharing and native phone execution require their own verification; a green health check does not establish those behaviors. Standard GitHub-hosted Ubuntu runners are free for public repositories; no paid runner or hosting upgrade is configured here.
 

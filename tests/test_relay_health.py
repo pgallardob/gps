@@ -47,6 +47,7 @@ class HealthConfigurationTests(unittest.TestCase):
         self.assertEqual(max((minutes[(i + 1) % len(minutes)] - minute) % 60 for i, minute in enumerate(minutes)), 14)
         self.assertNotIn(0, minutes)
         self.assertIn("workflow_dispatch:", workflow)
+        self.assertIn("branches: [main]", workflow)
         self.assertIn("timeout-minutes: 4", workflow)
         self.assertIn("persist-credentials: false", workflow)
         self.assertNotIn("PUNTO_OWNER_KEY", workflow)
