@@ -9,6 +9,10 @@ const { Client } = require("../js/sharing-client.js");
 const base = process.env.PUNTO_SHARING_SIM_URL;
 const token = "t".repeat(43), viewer = "v".repeat(43);
 const syntheticPoint = { coords: { latitude: 0, longitude: 0, accuracy: 10 } };
+// Node does not add the browser's automatic Origin header; keep the actual HTTP client.
+const browserFetch = (url, options = {}) => fetch(url, {
+    ...options, headers: { ...options.headers, Origin: "https://pgallardob.github.io" }
+});
 
 async function receiver(id, geolocation) {
     let resolveReady, rejectReady, resolveStopped;
@@ -30,7 +34,7 @@ async function receiver(id, geolocation) {
         }
     });
     const context = vm.createContext({
-        URL, AbortController, TextDecoder, performance, setTimeout, clearTimeout, fetch,
+        URL, AbortController, TextDecoder, performance, setTimeout, clearTimeout, fetch: browserFetch,
         setInterval: callback => { tick = callback; return 1; }, clearInterval: () => {},
         navigator: { geolocation }, isSecureContext: true, GPS_CONFIG: { sharingApiUrl: base },
         location: { hostname: "127.0.0.1", pathname: "/share.html", search: "", hash: `#invite=${id}.${token}` },
@@ -58,7 +62,7 @@ test("publisher DOM and real HTTP client against the local relay simulation", { 
     assert.equal(url.pathname, "/relay");
     const reset = await fetch(`${base}/__reset`, { method: "POST" });
     assert.equal(reset.status, 200);
-    const client = new Client(base, undefined, { hostname: "127.0.0.1" });
+    const client = new Client(base, browserFetch, { hostname: "127.0.0.1" });
 
     await t.test("GPS retry stays consent-gated, then sends a synthetic point and revokes it", async () => {
         const id = "r".repeat(22);

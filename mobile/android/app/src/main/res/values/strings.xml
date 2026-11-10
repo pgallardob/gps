@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">Punto Android</string>
+    <string name="title">Compartir con permiso</string>
+    <string name="intro">Pega una invitación privada de Punto solo si conoces y confías en quien la envió. No se busca un teléfono por su número. La ubicación solo se comparte después de verificar el enlace y aceptar.</string>
+    <string name="link_hint">Enlace privado de invitación</string>
+    <string name="verify">Verificar invitación</string>
+    <string name="consent">Acepto compartir mi ubicación durante el tiempo indicado, incluso con la pantalla apagada. Puedo detenerla desde la notificación.</string>
+    <string name="start">Aceptar y compartir</string>
+    <string name="stop">Detener</string>
+    <string name="battery">Ajustes de batería</string>
+    <string name="privacy">No se guarda un historial ni la clave del propietario. El enlace se mantiene solo en memoria. El mapa del propietario debe seguir visible y conectado. Vencimiento, pérdida de conexión, permisos, batería o cierre forzado pueden detener la sesión.</string>
+</resources>
