@@ -1,56 +1,38 @@
-# Resume here: Render relay and native background GPS
+# Resume here: PWA sharing, Android preview and relay health
 
-**Checkpoint: 2026-10-16.** Work is paused at the owner's request. Next: authorize/review Render deployment, then plan native Android/iOS background location. Do not provision or charge for hosting from this checkpoint alone.
+**Handoff: 2026-11-10.** The owner authorized careful review, GitHub upload and publication. They use Windows only and explicitly deferred native iOS/macOS/Xcode work, not Android. No paid hosting upgrade, signing account or private credential collection is authorized.
 
-Git tag: `checkpoint-render-mobile-2026-10-16`.
+## Current architecture
 
-## Current state
-
-| Area | Verified state |
+| Area | State and evidence boundary |
 | --- | --- |
-| Repository | https://github.com/pgallardob/gps — `main`, application baseline `463c986` |
-| Public PWA | https://pgallardob.github.io/gps/ — HTTPS and workflow Pages enabled |
-| Deployment | [Build, relay tests and deployment succeeded](https://github.com/pgallardob/gps/actions/runs/38963125884) |
-| Sharing implementation | Consent-based relay and browser flow implemented/tested locally; public relay URL remains unconfigured |
-| Render account | Owner confirmed an existing account. Login/access, existing project services, plan and billing approval have **not** been checked |
-| Mobile targets | Owner's phone is **Android**; **both Android and iOS** must be considered |
-| Background tracking | No native client implemented. Current PWA cannot guarantee GPS while hidden/locked |
-| Secrets | No Render/relay credentials in this repository. No paid plan or Render resource created by this work |
+| Public PWA | https://pgallardob.github.io/gps/ — Pages is already configured |
+| Relay | https://gps-lj9l.onrender.com — owner-created Free Render service; public build already contains its URL |
+| Secrets | Owner key stays in Render and the owner's runtime browser entry; never in a build variable, native app, chat or private invitation URL |
+| Browser publisher | Foreground-only; startup errors identify GPS/accept/upload and allow deliberate GPS retry only before acceptance |
+| Android | Separate Kotlin foreground-location sender; [native verification workflow](https://github.com/pgallardob/gps/actions/workflows/android.yml) must pass unit/lint/emulator/HTTP checks before a preview APK is offered |
+| iOS | Native background sender is **not implemented**, explicitly deferred by owner; foreground PWA remains available |
+| Health checks | [Scheduled/manual workflow](https://github.com/pgallardob/gps/actions/workflows/relay-health.yml), nominal max 14-minute gaps; best-effort, not always-on service |
 
-The latest full local verification passed **123 tests**, with **one Windows symlink-permission skip**: 75 Node, 30 desktop/build Python and 18 relay tests. Browser checks covered explicit consent, synthetic periodic GPS, revocation, separate map markers, scoped caching and offline shell loading. Real phone installation and native background behavior remain unverified.
+The previous October checkpoint remains available at Git tag `checkpoint-render-mobile-2026-10-16`. Its statements that the relay is unconfigured or that publication is paused are historical, not current instructions.
 
-This checkpoint changes documentation only; it does not change application behavior or deploy the relay. Its commit includes `[skip render]` to avoid triggering a connected Render auto-deploy.
+## Resume safely
 
-## Start the next session here
+1. Inspect `git status` and the latest CI run before assuming a build or deployment is complete. Do not recreate Pages or Render or ask if an account exists.
+2. Only **PUNTO_SHARING_API_URL**, the public API origin, belongs in GitHub repository Variables. Never request or display the real owner key, recipient link, phone number or coordinates in agent tools.
+3. Download the Android **live-endpoint preview** only from a successful native workflow. Never distribute the HTTP/synthetic simulation flavor. Debug signing, installation, update limitations and device instructions are in [mobile/README.md](mobile/README.md).
+4. Continue the owner's real Android test: create a fresh 15-minute invitation in the visible PC map, transfer only to their consenting phone, verify/accept in the native app, check screen-off updates and then notification Stop/revocation. Successful compilation/emulation does not establish behavior on that phone/OEM battery policy.
+5. Keep the browser sharing behavior separate: its page still stops when hidden, and PWA installation alone does not enable background sharing. Export any unsaved route/favorites before closing/reloading PWA windows for an update.
+6. Review `MONITORING.md` before claiming the 14-minute job is active or keeps Free compute awake. GitHub may delay/drop jobs, disable inactive public-repo schedules, and Render still enforces shared Free hours/restarts.
 
-1. Check `git status` and read this file. The published PWA and GitHub Pages setup are already done; do not recreate them or ask whether a Render account exists again.
-2. Use normal Render login/OAuth with the owner's participation. Check for an existing service for this project before creating another. Never request passwords or tokens in chat.
-3. Confirm the hosting plan and explicit approval for any cost. Render free web instances idle-spin-down after 15 minutes; paid compute avoids idle spin-down, but no price/plan has been approved.
-4. Configure the independent relay from `sharing/`, not `serve.py` or the QGIS bridge. Keep one worker/replica, validate Render's trusted HTTPS/proxy setup, and configure the private owner key plus exact frontend origin `https://pgallardob.github.io` and the assigned API hostname. Keep local HTTP disabled publicly.
-5. Set **only the public HTTPS API URL** as the GitHub repository variable `PUNTO_SHARING_API_URL`, rebuild Pages, and verify health, authentication, denied origins/hosts, invitation consent, revocation, expiry and network loss. Do not put owner credentials in frontend code, URLs or build variables.
-6. Choose a native implementation supporting both systems, validating Android first. Check SDK/tooling/signing availability before installing anything: Android needs a foreground location service with an ongoing notification and Stop action; iOS needs Core Location background capabilities/authorization and an active indicator. iOS builds/signing require appropriate Apple tooling.
-7. Revisit relay session durability and authorization semantics before claiming "until the user stops." Current sessions are RAM-only, limited to 5–60 minutes, and end after 45 seconds without the publisher or 60 seconds without the viewer. Do not simply remove visibility/expiry checks or weaken consent. Keep stale points hidden and revocation effective.
+## Boundaries that remain deliberate
 
-## Non-negotiable boundaries
+- Explicit recipient consent and device permission are required. A number is only a local label, not identity verification or GPS lookup.
+- Consent is finite (5–60 minutes). The relay remains one worker/replica, RAM-only; no session survives a restart. Positions become stale after 20 seconds; publisher/viewer leases expire after 45/60 seconds. Native background support does not silently remove these limits or promise indefinite tracking.
+- Android requires an ongoing notification with Stop and a foreground user-started location service. Force-stop, lost permissions/connectivity/GPS and battery/OS policy can still interrupt it. Do not add boot restart, hidden consent, disk replay queues or owner-key storage.
+- Desktop `serve.py` and QGIS stay loopback-only, never in public deployment. Preserve the exact vendored bytes/SRI and `.gitattributes` Leaflet rules.
 
-- A phone number is a local label, not GPS lookup or identity verification. Sharing requires the device user's explicit consent and location permission.
-- PWA service workers/background sync cannot guarantee a continuous GPS feed. Even native operation remains subject to OS force-stop, permissions, battery, connectivity and GPS availability.
-- No Render deployment, paid resource, public tunnel, native installation or signing-account setup is authorized for this closing session.
-- Preserve exact vendored bytes and HTML SRI: `.gitattributes` deliberately uses `vendor/leaflet/** -text`.
-- Do not cache location/API/token responses, queue old positions for later upload or expose the desktop native API publicly.
-
-## Relevant paths
-
-| Path | Purpose |
-| --- | --- |
-| `DEPLOYMENT.md` | Existing Pages/PWA and relay connection guide |
-| `sharing/README.md`, `sharing/app.py`, `sharing/store.py` | Relay deployment, authentication, volatile state and leases |
-| `js/deployment.js`, `scripts/build_site.py` | Public API URL and allowlisted static build |
-| `js/share-publisher.js`, `js/sharing.js` | Current foreground-only sender and owner/viewer lifecycle |
-| `.github/workflows/pages.yml` | Tested public Pages pipeline |
-| `SECURITY.md` | Privacy boundary and remaining limitations |
-
-## Verification when runtime work resumes
+## Checks
 
 ```powershell
 node --test
@@ -58,4 +40,4 @@ python -B -m unittest discover -s tests
 python -B -m unittest discover -s sharing/tests
 ```
 
-The last command needs the optional isolated dependencies in `sharing/requirements-dev.txt`. Do not use or publish local loopback test builds as production artifacts. The pinned upstream TestClient currently emits a documented HTTPX deprecation warning; tests pass.
+The relay suite needs isolated `sharing/requirements-dev.txt` dependencies. Optional real HTTP fixtures and native build/emulator commands are documented in `postman/README.md`, `MONITORING.md` and `mobile/README.md`. Distinguish skipped optional suites, synthetic HTTP/emulator evidence, observed CI success and the owner's physical-device result; never conflate them.

@@ -2,7 +2,7 @@
 
 This ASGI service relays **only the latest consented position** between a visible sender and viewer. It cannot locate a phone number. It is independent of GitHub Pages and has no native QGIS/program-execution code.
 
-**Deployment is pending.** The owner confirmed a Render account; service access, plan/cost approval, HTTPS/proxy configuration and the frontend connection are the next session's work. Resume from [NEXT_SESSION.md](../NEXT_SESSION.md); do not deploy or remove the current session limits as part of saving this checkpoint.
+**Live deployment:** the owner's Free Render service is **https://gps-lj9l.onrender.com** and the public Pages build uses its URL. Keep the owner key private and the existing TLS/host/origin checks intact. The [nominal 14-minute health check](../MONITORING.md) does not guarantee always-on Free compute or persistence. Resume from [NEXT_SESSION.md](../NEXT_SESSION.md); do not weaken session/consent limits. The web sender remains foreground-only; the separate [Android native sender](../mobile/README.md) uses the same roles, finite consent, freshness and viewer/publisher leases.
 
 ## Required configuration
 

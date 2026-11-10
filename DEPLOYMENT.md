@@ -4,7 +4,7 @@
 
 This repository is `pgallardob/gps`, with workflow-based Pages at **https://pgallardob.github.io/gps/**. Its frontend origin for a future relay allowlist is `https://pgallardob.github.io` (without `/gps/`).
 
-**Continuation checkpoint:** [NEXT_SESSION.md](NEXT_SESSION.md). The owner already has a Render account, but no Render service/plan has been configured or approved by this work. Public sharing remains disabled until the relay is deliberately deployed and its URL connected. Android is the owner's device; native background support must consider iOS too, separately from PWA hosting.
+**Current relay:** the owner configured a Free Render web service at **https://gps-lj9l.onrender.com**, and the public Pages build is connected through `PUNTO_SHARING_API_URL`. Do not recreate that service or put its owner key in GitHub. See [NEXT_SESSION.md](NEXT_SESSION.md), [health checks](MONITORING.md) and the separate [native Android sender](mobile/README.md). The owner uses Windows and deferred native iOS work; the web PWA still supports foreground use on both phone platforms.
 
 ## 1. Publish the PWA
 
@@ -31,6 +31,8 @@ The output is `dist/`. The builder refuses to overwrite a directory containing u
 | iPhone / iPad | Open in Safari → Share → Add to Home Screen. |
 
 Installation does not grant location permission. The `localhost` URL on a PC points to that PC; entering it on a phone does not reach the PC. A browser/desktop preview is not a substitute for checking installation on a real phone.
+
+For Android locked-screen sharing, use the separately verified native preview described in [mobile/README.md](mobile/README.md), not merely Chrome's PWA installation. Its notification, explicit permissions, consent duration, Stop behavior and device battery policy remain part of the test. iOS native background support is not implemented.
 
 The service worker caches **only public interface files**. It does not cache map tiles, positions, invitations, API responses, owner keys or authorization headers, and has no offline upload queue. The interface can open offline after its first complete visit; map imagery and sharing still require internet. GPS availability depends on the device and OS.
 

@@ -4,7 +4,7 @@ The map opens immediately, without requesting location permission. Locate yourse
 
 GitHub Pages URL: **https://pgallardob.github.io/gps/**. The Pages workflow publishes the public PWA; optional cross-device sharing still requires its separate HTTPS relay configuration.
 
-**Continue development:** [NEXT_SESSION.md](NEXT_SESSION.md) records the Render/mobile checkpoint, confirmed account availability, pending approvals and next steps.
+**Continue development:** [NEXT_SESSION.md](NEXT_SESSION.md) records the live relay, Android verification, deferred iOS work and remaining real-device checks.
 
 ## Open the app
 
@@ -21,6 +21,10 @@ Open **http://127.0.0.1:8080**. If that port is occupied, use `python -I -B serv
 ## Phone installation and invited locations
 
 Punto includes an Android/iPhone PWA manifest, icons, installation guidance and a static-only offline shell. See **[DEPLOYMENT.md](DEPLOYMENT.md)** for GitHub Pages setup and phone installation. Publishing is controlled by the repository's explicitly triggered Pages workflow.
+
+The public site is connected to **https://gps-lj9l.onrender.com**. The **[Android native sender](mobile/README.md)** is a separate, explicit-consent companion with a location foreground service and notification Stop action; installing the PWA alone does not enable locked-screen sharing. Native iOS background support is deferred. Only download an Android preview APK from a successful verification workflow; physical-device behavior still needs the owner's test.
+
+The **[relay health workflow](MONITORING.md)** checks the public health endpoint on a nominal maximum 14-minute schedule. GitHub scheduling and Render Free remain best-effort; this is not an uptime or session-durability guarantee.
 
 The **Ubicación por invitación** panel is optional and disabled until a separate HTTPS relay URL is configured. A number is only a local label: create and manually share a private link, then the recipient must explicitly approve GPS sharing. It is not a phone-number lookup or silent tracker. The relay retains only a short-lived latest point; shared markers remain separate from personal route exports. See [sharing/README.md](sharing/README.md) for the independently deployed service and owner-key setup.
 
