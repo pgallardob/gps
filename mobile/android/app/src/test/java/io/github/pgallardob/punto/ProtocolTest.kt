@@ -1,11 +1,14 @@
 package io.github.pgallardob.punto
 
-import com.sun.net.httpserver.HttpServer
+import okhttp3.mockwebserver.Dispatcher
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.RecordedRequest
 import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
-import java.net.InetSocketAddress
-import java.util.concurrent.Executors
+import java.net.InetAddress
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 class ProtocolTest {
@@ -64,25 +67,25 @@ class ProtocolTest {
 
     @Test fun realHttpUsesCapabilitiesInHeadersAndAConsentOnlyBody() {
         val calls = mutableListOf<String>()
-        withServer { exchange ->
-            calls.add(exchange.requestMethod)
-            assertEquals(RelayApi.ORIGIN, exchange.requestHeaders.getFirst("Origin"))
-            assertNull(exchange.requestHeaders.getFirst("Cookie"))
-            val expected = if (exchange.requestMethod == "PUT") publisher else token
-            assertEquals("Bearer $expected", exchange.requestHeaders.getFirst("Authorization"))
-            val body = exchange.requestBody.readBytes().toString(Charsets.UTF_8)
-            val reply = when (exchange.requestMethod) {
+        withServer { request ->
+            calls.add(request.method.orEmpty())
+            assertEquals(RelayApi.ORIGIN, request.getHeader("Origin"))
+            assertNull(request.getHeader("Cookie"))
+            val expected = if (request.method == "PUT") publisher else token
+            assertEquals("Bearer $expected", request.getHeader("Authorization"))
+            val body = request.body.readUtf8()
+            val reply = when (request.method) {
                 "GET" -> """{"id":"$id","state":"pending","remainingSeconds":900,"expiresAt":"2030-01-01T00:00:00Z"}"""
                 "POST" -> {
                     assertEquals(true, JSONObject(body).get("consent"))
                     assertEquals(1, JSONObject(body).length())
-                    assertNotNull(exchange.requestHeaders.getFirst("Content-Length"))
+                    assertNotNull(request.getHeader("Content-Length"))
                     """{"publisherToken":"$publisher","remainingSeconds":900}"""
                 }
                 "PUT" -> { assertEquals(3, JSONObject(body).length()); """{"accepted":true}""" }
                 else -> """{"stopped":true}"""
             }
-            respond(exchange, 200, reply)
+            respond(200, reply)
         }.use { fixture ->
             val api = RelayApi(fixture.base, true)
             val invitation = Invitation.parse(link)
@@ -102,41 +105,35 @@ class ProtocolTest {
             ResponseCase(403, """{"error":"private-$token"}""", "application/json", "request_failed")
         )) {
             val calls = AtomicInteger()
-            withServer { exchange ->
+            withServer {
                 calls.incrementAndGet()
-                exchange.responseHeaders.add("Location", "/relay/should-not-follow")
-                respond(exchange, status, body, type)
+                respond(status, body, type).setHeader("Location", "/relay/should-not-follow")
             }.use { fixture -> failure(expected, Step.ACCEPT) { RelayApi(fixture.base, true).accept(Invitation.parse(link)) } }
             assertEquals(1, calls.get())
         }
     }
 
     @Test fun realHttpTimeoutNamesTheAcceptanceStage() {
-        withServer { exchange ->
-            Thread.sleep(250)
-            runCatching { respond(exchange, 200, "{}") }
+        withServer {
+            respond(200, "{}").setBodyDelay(250, TimeUnit.MILLISECONDS)
         }.use { fixture ->
             failure("network_timeout", Step.ACCEPT) { RelayApi(fixture.base, true, 50).accept(Invitation.parse(link)) }
         }
     }
 
     private data class ResponseCase(val status: Int, val body: String, val type: String, val expected: String)
-    private class Fixture(val server: HttpServer, val executor: java.util.concurrent.ExecutorService) : AutoCloseable {
-        val base get() = "http://127.0.0.1:${server.address.port}/relay"
-        override fun close() { server.stop(0); executor.shutdownNow() }
+    private class Fixture(val server: MockWebServer) : AutoCloseable {
+        val base get() = "http://127.0.0.1:${server.port}/relay"
+        override fun close() { server.shutdown() }
     }
-    private fun withServer(handler: (com.sun.net.httpserver.HttpExchange) -> Unit): Fixture {
-        val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        val executor = Executors.newCachedThreadPool()
-        server.executor = executor
-        server.createContext("/relay") { exchange -> handler(exchange) }
-        server.start()
-        return Fixture(server, executor)
+    private fun withServer(handler: (RecordedRequest) -> MockResponse): Fixture {
+        val server = MockWebServer()
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest) = handler(request)
+        }
+        server.start(InetAddress.getByName("127.0.0.1"), 0)
+        return Fixture(server)
     }
-    private fun respond(exchange: com.sun.net.httpserver.HttpExchange, code: Int, body: String, type: String = "application/json") {
-        val bytes = body.toByteArray(Charsets.UTF_8)
-        exchange.responseHeaders.add("Content-Type", type)
-        exchange.sendResponseHeaders(code, bytes.size.toLong())
-        exchange.responseBody.use { it.write(bytes) }
-    }
+    private fun respond(code: Int, body: String, type: String = "application/json") =
+        MockResponse().setResponseCode(code).setHeader("Content-Type", type).setBody(body)
 }
