@@ -10,3 +10,6 @@ site-preview*/
 exports/
 *.log
 .DS_Store
+
+# Local connection notes must not enter the public repository.
+/datosconexion.txt
