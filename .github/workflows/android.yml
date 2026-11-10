@@ -6,6 +6,7 @@ on:
       - 'mobile/android/**'
       - 'scripts/check_android_trace.py'
       - 'scripts/annotate_android_failure.py'
+      - 'scripts/verify_android_emulator.sh'
       - 'postman/mocks/sharing-relay/**'
       - 'postman/simulations/sharing-start.sim.yaml'
       - '.github/workflows/android.yml'
@@ -60,19 +61,7 @@ jobs:
           ram-size: 2048M
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
-          script: |
-            set -euo pipefail
-            setsid postman simulation run postman/simulations/sharing-start.sim.yaml --port 4915 --no-history --output ndjson > "$RUNNER_TEMP/android-relay.ndjson" 2> "$RUNNER_TEMP/android-relay.err" &
-            simulation_pid=$!
-            trap 'kill -TERM -- -"$simulation_pid" 2>/dev/null || true' EXIT
-            ready=false
-            for attempt in $(seq 1 30); do
-              if curl --fail --silent -X POST http://127.0.0.1:4915/relay/__reset >/dev/null; then ready=true; break; fi
-              sleep 1
-            done
-            test "$ready" = true
-            gradle -p mobile/android --no-daemon --console=plain connectedSimulationDebugAndroidTest 2>&1 | tee "$RUNNER_TEMP/android-connected.log"
-            python scripts/check_android_trace.py "$RUNNER_TEMP/android-relay.ndjson"
+          script: bash scripts/verify_android_emulator.sh
       - name: Publish sanitized failure annotations
         if: failure()
         run: python scripts/annotate_android_failure.py
@@ -95,5 +84,6 @@ jobs:
             ${{ runner.temp }}/android-relay.err
             ${{ runner.temp }}/android-build.log
             ${{ runner.temp }}/android-connected.log
+            ${{ runner.temp }}/android-trace-check.log
           if-no-files-found: ignore
           retention-days: 3

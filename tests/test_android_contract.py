@@ -91,6 +91,23 @@ class AndroidContractTests(unittest.TestCase):
             self.assertEqual(output.getvalue().count("::error title="), 1)
             self.assertIn("compiler root cause", output.getvalue())
 
+    def test_emulator_invokes_one_bash_script_without_masking_test_failures(self):
+        workflow = (ROOT / ".github/workflows/android.yml").read_text(encoding="utf-8")
+        self.assertIn("script: bash scripts/verify_android_emulator.sh", workflow)
+        shell = (ROOT / "scripts/verify_android_emulator.sh").read_text(encoding="utf-8")
+        self.assertIn("set -euo pipefail", shell)
+        self.assertIn("connectedSimulationDebugAndroidTest", shell)
+        self.assertIn("check_android_trace.py", shell)
+
+    def test_successful_build_is_not_reported_as_a_compilation_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "android-build.log").write_text("BUILD SUCCESSFUL in 2m", encoding="utf-8")
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                reporter.main(root, root / "empty-build")
+            self.assertNotIn("android-build.log", output.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

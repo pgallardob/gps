@@ -12,6 +12,7 @@ import android.os.PowerManager
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.TextView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -45,13 +46,13 @@ class BackgroundSharingTest {
             return JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
         } finally { connection.disconnect() }
     }
-    private fun await(message: String, timeout: Long = 15000, condition: () -> Boolean) {
+    private fun await(message: String, timeout: Long = 15000, diagnostic: () -> String = { SessionStatus.current.text }, condition: () -> Boolean) {
         val deadline = SystemClock.elapsedRealtime() + timeout
         while (SystemClock.elapsedRealtime() < deadline) {
             if (condition()) return
             Thread.sleep(100)
         }
-        fail(message)
+        fail("$message. Status: ${diagnostic()}")
     }
 
     @Suppress("DEPRECATION")
@@ -79,11 +80,13 @@ class BackgroundSharingTest {
                     assertFalse(it.findViewById<Button>(R.id.start).isEnabled)
                     it.findViewById<Button>(R.id.verify).performClick()
                 }
-                await("Invitation did not become ready") {
+                var previewStatus = ""
+                await("Invitation did not become ready", diagnostic = { previewStatus }) {
                     var enabled = false
                     scenario.onActivity {
                         it.findViewById<CheckBox>(R.id.consent).isChecked = true
                         enabled = it.findViewById<Button>(R.id.start).isEnabled
+                        previewStatus = it.findViewById<TextView>(R.id.status).text.toString()
                     }
                     enabled
                 }

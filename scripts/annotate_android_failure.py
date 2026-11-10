@@ -23,11 +23,13 @@ def emit(text):
 def main(temp_directory=None, build_directory=None):
     count = 0
     temp = Path(temp_directory) if temp_directory is not None else Path(os.environ["RUNNER_TEMP"])
-    for name in ("android-build.log", "android-connected.log"):
+    for name in ("android-build.log", "android-connected.log", "android-trace-check.log", "android-relay.err"):
         file = temp / name
         if not file.exists():
             continue
         lines = file.read_text(encoding="utf-8", errors="replace").splitlines()
+        if not lines or name in ("android-build.log", "android-connected.log") and any(re.match(r"^BUILD SUCCESSFUL\b", line) for line in lines):
+            continue
         selected = [line for line in lines if re.search(r"(^e:|error:|Unresolved reference|^FAILURE:|^\s*>\s+(?!Task\b)|FAILED|What went wrong|Exception)", line, re.IGNORECASE)]
         # GitHub limits error annotations per step. Group diagnostics instead of spending the budget on normal task lines.
         emit(name + "\n" + "\n".join(selected[-25:] + ["Final build context:"] + lines[-45:]))
