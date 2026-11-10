@@ -1,0 +1,10 @@
+version: 1
+name: relay-health
+slug: relay-health
+protocol: http
+port: 4510
+interceptRequests: true
+scenarios:
+  - name: default
+    path: ./default.js
+    default: true

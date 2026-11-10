@@ -1,0 +1,5 @@
+simulation: relay-health
+routing: path
+mocks:
+  - routeKey: health
+    path: ../mocks/relay-health/config.yaml
