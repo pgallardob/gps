@@ -81,6 +81,16 @@ class AndroidContractTests(unittest.TestCase):
         self.assertIn("%0A", output.getvalue())
         self.assertIn("%25", output.getvalue())
 
+    def test_compile_diagnostics_do_not_exhaust_the_annotation_budget_on_normal_tasks(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "android-build.log").write_text("\n".join(["> Task :app:normal"] * 100 + ["e: compiler root cause"]), encoding="utf-8")
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                reporter.main(root, root / "empty-build")
+            self.assertEqual(output.getvalue().count("::error title="), 1)
+            self.assertIn("compiler root cause", output.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

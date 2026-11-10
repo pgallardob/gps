@@ -58,6 +58,9 @@ class BackgroundSharingTest {
     @Test fun foregroundLocationSurvivesScreenOffAndNotificationStopRevokesIt() {
         assertTrue("Never run this synthetic test against production", BuildConfig.SIMULATION)
         request("__reset", "POST")
+        shell("input keyevent KEYCODE_WAKEUP")
+        shell("wm dismiss-keyguard")
+        shell("cmd location set-location-enabled true")
         for (permission in listOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.POST_NOTIFICATIONS)) {
             shell("pm grant ${context.packageName} $permission")
         }

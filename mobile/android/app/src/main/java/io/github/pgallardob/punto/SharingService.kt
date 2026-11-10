@@ -57,6 +57,7 @@ class SharingService : Service(), LocationListener {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == STOP) { stopSharing("Ubicación detenida por el usuario.", true); return START_NOT_STICKY }
         if (intent?.action != START || invitation != null) { if (invitation == null) stopSelf(); return START_NOT_STICKY }
+        if (gate.stopped || closing.get()) { intent.removeExtra("capability"); stopSelf(); return START_NOT_STICKY }
         val pending = try { Invitation.parts(intent.getStringExtra("id").orEmpty(), intent.getStringExtra("capability").orEmpty()) }
         catch (_: ShareFailure) { stopSelf(); return START_NOT_STICKY }
         intent.removeExtra("capability")
@@ -147,7 +148,7 @@ class SharingService : Service(), LocationListener {
         val fix = Fix(location.latitude, location.longitude, location.accuracy.toDouble(), location.elapsedRealtimeNanos / 1000000)
         try { fix.validate(SystemClock.elapsedRealtime()) } catch (_: ShareFailure) { return }
         latest.set(fix)
-        if (publisher == null && busy.compareAndSet(false, true)) worker.execute {
+        if (publisher == null && !gate.acceptanceAttempted && busy.compareAndSet(false, true)) worker.execute {
             val pending = invitation ?: return@execute
             try {
                 gate.check()
@@ -177,6 +178,7 @@ class SharingService : Service(), LocationListener {
     }
 
     private fun fail(failure: ShareFailure) {
+        gate.stop()
         if (!destroyed) handler.post { if (!destroyed) stopSharing(failureMessage(failure), gate.acceptanceAttempted) }
     }
 

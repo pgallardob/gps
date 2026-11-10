@@ -28,6 +28,13 @@ class ProtocolTest {
         }
     }
 
+    @Test fun privateCapabilitiesAndCoordinatesHaveRedactedRepresentations() {
+        assertFalse(Invitation.parse(link).toString().contains(token))
+        assertFalse(Acceptance(publisher, 900).toString().contains(publisher))
+        assertEquals("Fix([redacted])", Fix(12.345, -67.89, 10.0, 0).toString())
+        assertTrue(java.lang.reflect.Modifier.isPrivate(Invitation::class.java.getDeclaredMethod("copy", String::class.java, String::class.java).modifiers))
+    }
+
     @Test fun consentDeadlineCannotBeRenewedAndCancellationIsFinal() {
         var clock = 0L
         val gate = SafetyGate { clock }

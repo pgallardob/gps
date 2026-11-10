@@ -11,7 +11,9 @@ import java.util.concurrent.atomic.AtomicReference
 enum class Step { PREVIEW, LOCATION, ACCEPT, PUBLISH, STOP }
 class ShareFailure(val code: String, val step: Step) : Exception(code)
 
+@ConsistentCopyVisibility
 data class Invitation private constructor(val id: String, val token: String) {
+    override fun toString() = "Invitation([redacted])"
     companion object {
         private val idPattern = Regex("[A-Za-z0-9_-]{22}")
         private val tokenPattern = Regex("[A-Za-z0-9_-]{43,128}")
@@ -34,8 +36,11 @@ data class Invitation private constructor(val id: String, val token: String) {
 }
 
 data class Preview(val remainingSeconds: Int)
-data class Acceptance(val token: String, val remainingSeconds: Int)
+data class Acceptance(val token: String, val remainingSeconds: Int) {
+    override fun toString() = "Acceptance([redacted])"
+}
 data class Fix(val latitude: Double, val longitude: Double, val accuracy: Double, val elapsedMillis: Long) {
+    override fun toString() = "Fix([redacted])"
     fun coordinatesValid() = latitude.isFinite() && longitude.isFinite() && accuracy.isFinite() &&
         latitude in -90.0..90.0 && longitude in -180.0..180.0 && accuracy in 0.0..20000000.0
     fun validate(now: Long) {
