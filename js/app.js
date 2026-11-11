@@ -2,6 +2,9 @@
     "use strict";
 
     const config = window.GPS_CONFIG;
+    const native = window.PuntoNative || null;
+    let nativeVisible = true;
+    let nativeTilesAllowed = false;
     const ids = `locate-btn start-btn stop-btn recenter-btn fit-route-btn copy-btn export-btn clear-btn
         status status-box tracking-badge lat lon address address-btn last-update distance accuracy speed point-count
         follow-toggle map-mode map-notice retry-map-btn external-map-link action-feedback connection-label connection-badge
@@ -10,7 +13,7 @@
         pause-map-toggle pause-hidden-toggle forget-btn open-qgis-btn qgis-check-btn qgis-status qgis-install-link`.split(/\s+/);
     const elements = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
     const routeOptions = { minDistance: config.minPointDistance, maxAccuracy: config.maxPointAccuracy, maxPoints: config.maxRoutePoints };
-    const route = new GPSCore.Route(routeOptions);
+    const route = native ? native.createRoute(GPSCore, routeOptions) : new GPSCore.Route(routeOptions);
     const addresses = new AddressLookup({ endpoint: config.reverseGeocodingUrl, minInterval: config.addressMinInterval });
     const clock = new GPSSession.SessionClock();
     const qgis = new QgisClient();
@@ -121,7 +124,8 @@
         let point;
         try { point = GPSCore.toPoint(position); }
         catch { return false; }
-        if (currentPoint && point.timestamp < currentPoint.timestamp) return;
+        if (currentPoint && point.timestamp < currentPoint.timestamp && (!native || demoMode)) return;
+        point.nativeRecorded = Boolean(native && !demoMode && position.nativeRecorded);
         point.source = demoMode ? "demo" : "gps";
         const firstPosition = !currentPoint;
         currentPoint = point;
@@ -141,7 +145,7 @@
             addressPoint = null;
             elements.address.textContent = "Pulsa Consultar dirección para buscar esta posición.";
         }
-        if (isRecording() || forceRecord) {
+        if ((isRecording() && (!native || demoMode || point.nativeRecorded)) || forceRecord) {
             const before = route.distance;
             const result = route.add(point);
             if (result === "limit") {
@@ -184,13 +188,13 @@
                     invalid: "El navegador devolvió una posición inválida. Intenta obtenerla de nuevo.",
                     unknown: "No se pudo iniciar el GPS. Revisa los permisos y vuelve a intentarlo."
                 };
-                setStatus(messages[reason] || messages.unknown, "error");
+                setStatus(native && reason === "permission" ? "Permite ubicación y, para rastrear con la pantalla apagada, notificaciones en Punto. Después vuelve a pulsar el botón." : messages[reason] || messages.unknown, "error");
             }
         }
         syncButtons();
     }
 
-    const tracker = new LocationTracker({ geolocation: navigator.geolocation, secure: window.isSecureContext, options: config.geoOptions, onPosition, onState });
+    const tracker = new LocationTracker({ geolocation: native ? native.geolocation : navigator.geolocation, secure: window.isSecureContext, options: config.geoOptions, onPosition, onState });
 
     function pauseDemo() {
         clearInterval(demoTimer);
@@ -207,6 +211,7 @@
     }
 
     function stopAll() {
+        if (native && tracker.state === "locating") native.cancelLocate();
         if (tracker.state === "tracking" || tracker.state === "locating") tracker.stop();
         if (demoMode) pauseDemo();
     }
@@ -253,7 +258,8 @@
     function setMapPaused(paused) {
         mapPaused = paused;
         elements["pause-map-toggle"].checked = paused;
-        if (map) map.setTilesEnabled(!paused);
+        if (map) map.setTilesEnabled(!native && !paused && nativeVisible);
+        if (native) native.tiles(!paused);
         addressVersion += 1;
         addresses.clear();
         addressPoint = null;
@@ -327,6 +333,7 @@
 
     function resetSession() {
         stopAll();
+        if (native) native.clearRoute();
         sessionVersion += 1;
         addressVersion += 1;
         addresses.clear();
@@ -404,7 +411,9 @@
         if (!currentPoint) return;
         const version = sessionVersion;
         try {
-            await navigator.clipboard.writeText(`${currentPoint.lat.toFixed(6)}, ${currentPoint.lon.toFixed(6)}`);
+            const text = `${currentPoint.lat.toFixed(6)}, ${currentPoint.lon.toFixed(6)}`;
+            if (native) await native.copy(text);
+            else await navigator.clipboard.writeText(text);
             if (version === sessionVersion) feedback(demoMode ? "Coordenadas SIMULADAS copiadas." : "Coordenadas copiadas al portapapeles.");
         } catch { if (version === sessionVersion) feedback("No se pudo acceder al portapapeles. Puedes copiar las coordenadas del panel."); }
     });
@@ -414,6 +423,7 @@
         const gpx = elements["export-format"].value === "gpx";
         try {
             const data = gpx ? RouteFiles.toGPX(route, waypoints) : JSON.stringify(RouteFiles.toGeoJSON(route, waypoints), null, 2);
+            if (native) { native.exportFile(data, gpx ? "gpx" : "geojson"); return; }
             const blob = new Blob([data], { type: gpx ? "application/gpx+xml" : "application/geo+json" });
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
@@ -431,6 +441,11 @@
 
     async function checkQgis() {
         if (qgisBusy) return;
+        if (document.body.dataset.platform === "android") {
+            elements["qgis-status"].textContent = "QGIS solo está disponible en escritorio. Exporta el archivo para abrirlo allí.";
+            syncButtons();
+            return;
+        }
         qgisBusy = true;
         qgisAvailable = false;
         elements["qgis-status"].textContent = "Comprobando QGIS en este equipo…";
@@ -480,6 +495,7 @@
     elements["clear-btn"].addEventListener("click", () => {
         if (!route.pointCount || !window.confirm("¿Borrar el recorrido? Los favoritos se conservan. Exporta primero si quieres conservar los trazos.")) return;
         route.clear();
+        if (native) native.clearRoute();
         routeDirty = waypoints.length > 0;
         clock.reset();
         sessionDistance = 0;
@@ -491,17 +507,23 @@
         feedback("Recorrido borrado. Tu posición y tus favoritos siguen visibles.");
     });
 
-    elements["import-btn"].addEventListener("click", () => elements["import-file"].click());
+    elements["import-btn"].addEventListener("click", () => native ? native.chooseFile() : elements["import-file"].click());
     elements["import-file"].addEventListener("change", async () => {
         const file = elements["import-file"].files[0];
         elements["import-file"].value = "";
         if (!file || importBusy) return;
         if (file.size > RouteFiles.MAX_BYTES) { feedback("Archivo demasiado grande. El límite es de 4 MB."); return; }
+        try { await importText(file.text()); }
+        catch { feedback("No se pudo leer el archivo. La sesión anterior se conserva."); }
+    });
+
+    async function importText(text) {
+        if (importBusy) return;
         const version = sessionVersion;
         importBusy = true;
         syncButtons();
         try {
-            const data = RouteFiles.parseGeoJSON(await file.text());
+            const data = RouteFiles.parseGeoJSON(await text);
             const candidate = new GPSCore.Route(routeOptions);
             candidate.replace(data.segments);
             if (version !== sessionVersion) return;
@@ -523,15 +545,16 @@
         } catch {
             if (version === sessionVersion) feedback("No se importó el archivo. Usa GeoJSON válido: líneas y puntos, hasta 10.000 posiciones y 100 favoritos. Tu sesión anterior se conserva.");
         } finally { importBusy = false; syncButtons(); }
-    });
+    }
 
     elements["forget-btn"].addEventListener("click", () => {
         if (!window.confirm("¿Detener el GPS, intentar revocar las invitaciones y borrar ubicación, recorrido y favoritos de esta página? Las descargas, el portapapeles y las copias abiertas en QGIS no se borran.")) return;
         if (sharingPanel) sharingPanel.disconnect();
         resetSession();
+        if (native) native.forget();
         demoMode = false;
         renderMode();
-        setStatus("Sesión borrada y rastreo detenido. No se revocaron los permisos del navegador.");
+        setStatus(native ? "Sesión borrada y rastreo detenido. No se revocaron los permisos de Punto." : "Sesión borrada y rastreo detenido. No se revocaron los permisos del navegador.");
     });
 
     elements["address-btn"].addEventListener("click", async () => {
@@ -556,21 +579,56 @@
     window.addEventListener("online", () => { updateConnection(); if (map && !mapPaused) map.retry(); });
     window.addEventListener("offline", updateConnection);
     document.addEventListener("visibilitychange", () => {
-        if (document.hidden && (demoMode || elements["pause-hidden-toggle"].checked)) stopAll();
+        if (document.hidden && (demoMode || !native && elements["pause-hidden-toggle"].checked)) stopAll();
     });
-    window.addEventListener("pagehide", () => { stopAll(); addressVersion += 1; addresses.clear(); });
+    window.addEventListener("pagehide", () => { if (!native || demoMode) stopAll(); addressVersion += 1; addresses.clear(); });
     window.addEventListener("beforeunload", event => { if (routeDirty) { event.preventDefault(); event.returnValue = ""; } });
     updateConnection();
     renderWaypoints();
     syncButtons();
     checkQgis();
-    sharingPanel = new SharingPanel({
+    if (document.getElementById("sharing-form")) sharingPanel = new SharingPanel({
         apiUrl: config.sharingApiUrl,
         onLocations: entries => { if (map) map.drawSharedLocations(entries); },
         onFocus: entry => {
             if (map && entry.point) map.center({ lat: entry.point.latitude, lon: entry.point.longitude });
             elements["follow-toggle"].checked = false;
             elements["map-mode"].textContent = "Ubicación compartida con permiso";
+        }
+    });
+    if (native) native.bind({
+        segment: () => route.startSegment(),
+        stopped: message => { if (tracker.state === "tracking") { tracker.stop(); if (typeof message === "string") setStatus(message); } },
+        status: state => {
+            if (currentPoint?.source === "gps" && !demoMode) {
+                const age = Date.now() - currentPoint.timestamp;
+                const fresh = state.fresh && age >= 0 && age <= 20000;
+                elements["position-source"].textContent = fresh ? "Ubicación informada por tu dispositivo" : "Señal anterior · no es una lectura GPS actual";
+                if (map?.marker) map.marker.setStyle({ fillColor: fresh ? "#087f73" : "#666666" });
+                if (map?.accuracy) map.accuracy.setRadius(Math.min(currentPoint.accuracy, 100000));
+            }
+            if (state.active && tracker.state === "tracking") {
+                if (!state.fresh) setStatus("Esperando una señal reciente. La última posición no es una lectura actual.", "warning");
+                else if (typeof state.message === "string") setStatus(state.message, state.point?.[2] > config.maxPointAccuracy ? "warning" : "success");
+            }
+        },
+        notice: message => feedback(String(message)),
+        importFile: text => importText(text),
+        visibility: visible => { nativeVisible = visible === true; if (!nativeVisible && demoMode) pauseDemo(); if (map) map.setTilesEnabled(nativeVisible && !mapPaused && nativeTilesAllowed); },
+        tileAccess: enabled => {
+            nativeTilesAllowed = enabled === true;
+            if (!nativeTilesAllowed && !mapPaused) { mapPaused = true; elements["pause-map-toggle"].checked = true; renderMapState(latestTileState); }
+            if (map) map.setTilesEnabled(nativeVisible && !mapPaused && nativeTilesAllowed);
+            syncButtons();
+        },
+        restore: (segments, point, active, tiles) => {
+            setMapPaused(tiles === false);
+            route.replace(segments.map(segment => segment.map(value => ({ lat: value[0], lon: value[1], accuracy: value[2], timestamp: value[3], speed: null, source: "gps" }))));
+            routeDirty = route.pointCount > 0;
+            if (map) map.drawRoute(route.segments);
+            if (point) onPosition({ timestamp: point[3], coords: { latitude: point[0], longitude: point[1], accuracy: point[2], speed: point[4] } });
+            updateMetrics(); syncButtons();
+            if (active) { tracker.start(); if (route.pointCount) route.pendingSegment = false; }
         }
     });
 })();
