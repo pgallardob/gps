@@ -6,6 +6,10 @@
 
 Branch `feat/android-personal-map` contains version 0.2.0-preview: default personal map, native one-shot GPS, screen-off foreground route recording, explicit GeoJSON export and optional invitation sharing. This is not yet a verified APK; do not direct the owner to an older sender-only artifact as if it contains the map. Run the current Android workflow and inspect its exact revision before publishing. The old 0.1 APK was installed on the owner's phone, but physical-phone background operation remains unconfirmed.
 
+**Current blocker:** this Windows Git session has no noninteractive GitHub authentication. The normal push timed out waiting for sign-in; a subsequent public remote-ref check found no `feat/android-personal-map` branch. Local commits `cb6dcf8`, `d7cd107` and `be2361c` are preserved; `main` is unchanged. The owner must complete normal GitHub authentication, then push the feature branch to start Android CI. Do not request a password/token or read the ignored connection notes to bypass sign-in. No Android SDK/JDK/Gradle is installed locally.
+
+Local checks: Node **83 passed, 1 optional skipped**; Python **44 passed, 7 optional skipped**; isolated relay **18 passed**. New Android JVM/instrumentation tests are written but have not run. Keep this distinct from a compiled or working APK.
+
 ## Current architecture
 
 | Area | State and evidence boundary |
