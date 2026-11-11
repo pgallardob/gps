@@ -2,6 +2,16 @@
 
 **Handoff: 2026-11-11.** The owner authorized careful review, GitHub upload and publication. They explicitly requested invitation-free Android personal GPS/map/route recording, with remote sharing separate. They use Windows only and deferred native iOS/macOS/Xcode work. No paid hosting upgrade, signing account or private credential collection is authorized.
 
+## End-of-day checkpoint
+
+The owner reported **“esta okey”** after receiving the restored 0.3 preview, then requested saving, repository cleanup, uploading any pending work and continuing tomorrow. Preserve the approved design; do not start another redesign or merge into `main` during this checkpoint. This is general user-reported approval, not explicit confirmation of every physical-phone background or document-provider scenario.
+
+The local root installer `punto-android-0.3.0-preview.apk` matches the verified release SHA-256 below. It is preserved locally and ignored rather than deleted or committed. Private connection notes remain ignored and unread. Old local feature branch tips contain no commits missing from the remote histories; preserve those references rather than deleting/resetting them to make branch counters look tidy.
+
+The two temporary loopback preview servers (ports 4919 and 4920) were intentionally stopped after verifying their exact process IDs, commands and creation times. Their background-command exit codes reflect that shutdown, not an application or CI failure. No browser tabs, user session data, phone tracking, public Pages or Render services were closed or changed. Restart a safe preview server tomorrow before reloading its old local URL.
+
+Tomorrow: inspect status first, retain the direct verified download below, and confirm only the remaining physical-phone checks. An unmeasured follow-up is active-time/average-speed reconciliation if notification Stop occurs while the WebView is hidden; current emulator assertions verify route replay/counts, not exact displayed elapsed time. Reproduce before changing anything. No functional changes were made for shutdown/cleanup.
+
 ## Verified restored dashboard: physical-phone validation next
 
 The owner rejected **0.2** as visually poor and missing the excellent earlier phone interface/functions. Verified that original `index.html`, CSS and dashboard modules were intact; the new reduced native layout caused the regression. The right-hand pane had incorrectly been left on a bare, tiles-disabled map test. It now shows the complete generated dashboard in a 390 px review viewport.

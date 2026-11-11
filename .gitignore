@@ -11,5 +11,8 @@ exports/
 *.log
 .DS_Store
 
+# Downloaded Android installers are published in Releases, not Git history.
+/*.apk
+
 # Local connection notes must not enter the public repository.
 /datosconexion.txt
