@@ -4,7 +4,8 @@ import android.os.Handler
 import android.os.Looper
 import java.util.concurrent.CopyOnWriteArraySet
 
-data class Snapshot(val active: Boolean, val text: String, val id: String? = null, val requiresNewInvitation: Boolean = false)
+enum class SessionMode { PERSONAL, SHARED }
+data class Snapshot(val active: Boolean, val text: String, val id: String? = null, val requiresNewInvitation: Boolean = false, val mode: SessionMode = SessionMode.SHARED)
 
 object SessionStatus {
     @Volatile var current = Snapshot(false, "Sin compartir ubicación.")

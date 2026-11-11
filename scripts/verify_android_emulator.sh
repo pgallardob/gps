@@ -17,4 +17,4 @@ done
 test "$ready" = true
 
 gradle -p mobile/android --no-daemon --console=plain connectedSimulationDebugAndroidTest 2>&1 | tee "$RUNNER_TEMP/android-connected.log"
-python scripts/check_android_trace.py "$RUNNER_TEMP/android-relay.ndjson" 2>&1 | tee "$RUNNER_TEMP/android-trace-check.log"
+python scripts/check_android_trace.py "$RUNNER_TEMP/android-relay.ndjson" --with-personal 2>&1 | tee "$RUNNER_TEMP/android-trace-check.log"

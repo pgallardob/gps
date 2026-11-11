@@ -1,9 +1,11 @@
-name: Verify Android background sharing
+name: Verify Android GPS and sharing
 
 on:
   push:
     paths:
       - 'mobile/android/**'
+      - 'mobile/README.md'
+      - 'vendor/leaflet/**'
       - 'scripts/check_android_trace.py'
       - 'scripts/annotate_android_failure.py'
       - 'scripts/verify_android_emulator.sh'
@@ -51,7 +53,7 @@ jobs:
         run: npm install --global postman-cli@1.75.0
       - name: Enable hardware acceleration on the disposable runner
         run: sudo chmod 666 /dev/kvm
-      - name: Test native sharing with the screen off and notification Stop
+      - name: Test personal GPS and invitation sharing with the screen off and notification Stop
         uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: '35'

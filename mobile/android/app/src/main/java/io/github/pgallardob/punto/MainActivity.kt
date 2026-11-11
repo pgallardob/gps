@@ -1,17 +1,14 @@
 package io.github.pgallardob.punto
 
-import android.Manifest
 import android.app.Activity
-import android.app.NotificationManager
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import android.provider.Settings
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.WindowManager
+import android.view.View
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
@@ -24,6 +21,7 @@ class MainActivity : Activity() {
     private lateinit var start: Button
     private lateinit var verify: Button
     private lateinit var status: TextView
+    private lateinit var personal: PersonalPanel
     private var invitation: Invitation? = null
     private var deadline = 0L
     private var generation = 0
@@ -41,6 +39,10 @@ class MainActivity : Activity() {
         start = findViewById(R.id.start)
         verify = findViewById(R.id.verify)
         status = findViewById(R.id.status)
+        personal = PersonalPanel(this)
+        findViewById<Button>(R.id.personal_tab).setOnClickListener { showPersonal(true) }
+        findViewById<Button>(R.id.sharing_tab).setOnClickListener { showPersonal(false) }
+        showPersonal(true)
         link.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, begin: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, begin: Int, before: Int, count: Int) {
@@ -63,12 +65,24 @@ class MainActivity : Activity() {
         receiveLink(intent)
     }
 
-    override fun onStart() { super.onStart(); SessionStatus.observe(observer) }
-    override fun onResume() { super.onResume(); resumed = true; renderButtons() }
-    override fun onPause() { resumed = false; super.onPause() }
-    override fun onStop() { SessionStatus.remove(observer); super.onStop() }
-    override fun onDestroy() { generation++; worker.shutdownNow(); super.onDestroy() }
+    override fun onStart() { super.onStart(); SessionStatus.observe(observer); personal.start() }
+    override fun onResume() { super.onResume(); resumed = true; personal.resume(); renderButtons() }
+    override fun onPause() { resumed = false; personal.pause(); super.onPause() }
+    override fun onStop() { SessionStatus.remove(observer); personal.stop(); super.onStop() }
+    override fun onDestroy() { generation++; worker.shutdownNow(); personal.destroy(); super.onDestroy() }
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); receiveLink(intent) }
+    @Deprecated("System document picker compatibility")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        personal.result(requestCode, resultCode, data)
+    }
+
+    private fun showPersonal(visible: Boolean) {
+        findViewById<View>(R.id.personal_panel).visibility = if (visible) View.VISIBLE else View.GONE
+        findViewById<View>(R.id.sharing_panel).visibility = if (visible) View.GONE else View.VISIBLE
+        personal.setVisible(visible)
+        if (visible) personal.render()
+    }
 
     private fun receiveLink(source: Intent) {
         if (source.action == Intent.ACTION_SEND) {
@@ -78,6 +92,7 @@ class MainActivity : Activity() {
             val candidates = Regex("https://pgallardob\\.github\\.io/gps/share\\.html#invite=[A-Za-z0-9_-]{22}\\.[A-Za-z0-9_-]{43}(?![A-Za-z0-9_-])")
                 .findAll(text.take(4096)).map { it.value }.toList()
             link.setText(if (candidates.size == 1) candidates.single() else text.take(1024))
+            showPersonal(false)
         }
     }
 
@@ -87,11 +102,16 @@ class MainActivity : Activity() {
         link.isEnabled = !busy && !active
         consent.isEnabled = !active
         start.isEnabled = resumed && !busy && !active && consent.isChecked && invitation != null && SystemClock.elapsedRealtime() < deadline
-        findViewById<Button>(R.id.stop).isEnabled = active
+        findViewById<Button>(R.id.stop).isEnabled = active && SessionStatus.current.mode == SessionMode.SHARED
     }
 
     private fun renderSession() {
         val snapshot = SessionStatus.current
+        if (snapshot.mode == SessionMode.PERSONAL) {
+            if (snapshot.active) status.text = "Hay un recorrido personal activo. Detenlo antes de iniciar una sesión de compartir."
+            renderButtons()
+            return
+        }
         val belongsToThisInvitation = snapshot.id != null && snapshot.id == invitation?.id
         if (snapshot.active || belongsToThisInvitation || invitation == null && !busy) status.text = snapshot.text
         if (snapshot.active) consent.isChecked = true
@@ -132,21 +152,7 @@ class MainActivity : Activity() {
     private fun startSharing() {
         val pending = invitation ?: return
         if (!resumed || !consent.isChecked || busy || SessionStatus.current.active || SystemClock.elapsedRealtime() >= deadline) return
-        val locationGranted = listOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION)
-            .any { checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED }
-        val notificationsGranted = Build.VERSION.SDK_INT < 33 || checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-        if (!locationGranted || !notificationsGranted) {
-            val permissions = mutableListOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION)
-            if (Build.VERSION.SDK_INT >= 33) permissions.add(Manifest.permission.POST_NOTIFICATIONS)
-            requestPermissions(permissions.toTypedArray(), 42)
-            status.text = "Concede ubicación y notificaciones; después vuelve a pulsar Aceptar y compartir."
-            return
-        }
-        if (getSystemService(NotificationManager::class.java)?.areNotificationsEnabled() != true) {
-            status.text = "Activa las notificaciones de Punto para disponer del botón Detener."
-            startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName))
-            return
-        }
+        if (!locationReady(true, false) { status.text = it }) return
         try {
             startForegroundService(Intent(this, SharingService::class.java).setAction(SharingService.START)
                 .putExtra("id", pending.id).putExtra("capability", pending.token))

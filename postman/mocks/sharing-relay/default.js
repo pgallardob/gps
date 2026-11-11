@@ -19,6 +19,7 @@ http.createServer(async (req, res) => {
             await pm.state.set(key, seed());
             return reply(200, { reset: true });
         }
+        if (req.method === "POST" && path === "/__personal_done") return reply(200, { personal: true });
         if (req.headers.origin !== "https://pgallardob.github.io") return reply(403, { error: "origin_denied" });
         const sessions = await pm.state.get(key) || seed();
         const match = /^\/v1\/(invitations|sessions)\/([A-Za-z0-9_-]{22})(\/accept|\/position)?$/.exec(path);

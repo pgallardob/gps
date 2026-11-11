@@ -1,16 +1,30 @@
-# Native Android sender; iOS deferred
+# Punto Android: personal GPS and optional sharing
 
-The existing PWA remains the map/viewer and still deliberately stops its web publisher when hidden. This separate Android companion can publish the latest consented position from a **location foreground service** while its activity is hidden or its screen is off. It does not use a WebView, run a phone-number lookup, or contain the owner's private key.
+Punto opens **Mi mapa** without an invitation. It locates the phone and records a personal route using Android's native GPS and a visible **location foreground service**, including while the screen is off. **Compartir (opcional)** is separate: only that mode uses a verified invitation and sends consented positions to the relay. The existing PWA still provides invitation creation and the remote viewer; its web publisher remains foreground-only.
 
 ## Install and use the preview
 
-1. Open the latest successful **Verify Android background sharing** run in GitHub Actions and download **punto-android-preview**. Extract its APK and install it on your own consenting Android 8+ device. Installation from that download source is a manual system choice.
-2. This is a **debug-signed test build**, not a Play Store release. Its ephemeral CI signing key is not stored or published; a later build might require uninstalling the previous preview before reinstalling. No saved routes or credentials are kept by the native companion.
-3. In the PC PWA, create a private invitation. Copy it only to the intended phone; open **Punto Android** and paste the original link, or use the phone's text-sharing menu to send it to Punto Android. Never paste the owner key.
-4. Tap **Verificar invitación**, check the explicit consent, then **Aceptar y compartir**. Allow location and notifications if requested, then tap the start button again. Android 13+ notification permission is required so Stop remains visible.
-5. Leave the owner's map visible and connected. After the first point arrives, the sender can turn its screen off. Use **Detener** in the persistent notification or the app to stop locally immediately and attempt remote revocation.
+1. Open the latest successful [Android verification run](https://github.com/pgallardob/gps/actions/workflows/android.yml) and download **punto-android-preview**. Extract its APK and install it on your own consenting Android 8+ device. Version **0.2.0-preview** adds the personal map; the old 0.1 preview is invitation-only.
+2. In **Mi mapa**, tap **Obtener mi ubicación** for a single fix, or **Iniciar recorrido** to record. Allow precise location and notifications when requested, then tap Start again. Starting GPS always requires your action.
+3. While recording, you may turn the screen off. Use **Detener** in the app or ongoing notification to stop. **Exportar GeoJSON** saves a snapshot through Android's document picker; export before closing or uninstalling because routes otherwise exist only in RAM.
 
-The app accepts only this project's HTTPS invitation origin/path and uses a fixed HTTPS relay. Capabilities and at most one recent point exist only in process memory. No history, disk queue, automatic boot start, sticky service restart, owner key, phone identity or analytics is implemented. It checks 20-second point freshness before starting each upload; there is no offline replay queue.
+This is a **debug-signed preview**, not a Play Store release. CI signing keys are ephemeral; installing a later preview may require uninstalling the old one. Stop any active session and export anything you need first. No signing key is checked in.
+
+## Personal-mode privacy and limits
+
+- No invitation, owner key, PC viewer, relay availability or WhatsApp is needed. Personal mode makes no relay requests. It does not automatically share or silently switch to sharing.
+- Leaflet is bundled locally in a restricted WebView, used only as a renderer. GPS and recording are native, not browser geolocation. No JavaScript-to-native command bridge, file/content access, cookies, DOM storage or arbitrary remote-page navigation is enabled.
+- External **OpenStreetMap** tiles need internet; the provider can infer the area being viewed. **Pausar mapa externo** disables further tile requests while keeping the point/route overlay. Hiding the map or turning the screen off also pauses new tile requests. Already in-flight requests cannot be withdrawn. No offline tile download or prefetch is provided.
+- Routes are bounded to **10,000 points**, accept accuracy of at most **100 m**, and filter movement below **5 m**. GPS gaps over 30 seconds and separate Start/Stop sessions form separate segments, never a straight line across missing travel. These filters do not guarantee surveyed distance or location authenticity.
+- A point older than **20 seconds** is marked as a previous location, not a fresh fix. Personal recording has no relay consent deadline, but still depends on device power, permissions, GPS and Android/OEM policy. Export before the process is killed; no automatic disk history or recovery is implemented.
+
+## Optional remote sharing
+
+1. Create a private invitation in the visible PC PWA. Paste the original link into **Compartir (opcional)** on the intended phone. Android's text-sharing menu can prefill this field, but is not required.
+2. Tap **Verificar invitación**, check consent, then **Aceptar y compartir**. Allow location and notifications if requested, then tap Start again. Never paste the owner key.
+3. Keep the owner's map visible and connected. After the first point arrives, the phone's screen may be turned off. **Detener** stops locally immediately and attempts remote revocation.
+
+Recording and invitation sharing are mutually exclusive. Sharing accepts only this project's HTTPS invitation origin/path and fixed HTTPS relay. Capabilities and the latest shared point are RAM-only; shared points are not appended to the personal route. No disk queue, automatic boot start, sticky restart, owner key, phone identity or analytics is implemented. Uploads require a point at most 20 seconds old; there is no offline replay queue.
 
 ## Boundaries that still apply
 
@@ -21,11 +35,11 @@ The app accepts only this project's HTTPS invitation origin/path and uses a fixe
 
 ## Verification and build
 
-[Verification run 42903931697](https://github.com/pgallardob/gps/actions/runs/42903931697) passed compilation, JVM tests, lint, the API 35 screen-off/notification-Stop emulator test and HTTP trace checks for native source `d38f214`. It produced the live-endpoint preview APK. This is synthetic/emulator evidence, not a physical-device result; use the latest successful run for later code revisions.
+Only a successful workflow for the **current source revision** establishes compilation, JVM tests, lint and emulator verification. Earlier successful 0.1 runs verify the sender-only preview, not this personal-map feature. Physical-device confirmation remains a separate step.
 
 The workflow pins Java 17, Gradle 8.13, AGP 8.12.0 and Kotlin 2.3.0. It uses standard public Ubuntu 24.04 runners, basic GitHub caching, no paid Gradle service, no signing account and no real GPS or secrets. The Android SDK is installed only on the disposable runner, not the owner's Windows PC. Compiler/test failures publish bounded, redacted annotations so diagnosis does not require collecting credentials or exposing environment dumps.
 
-JVM tests exercise link/target validation, monotonic expiry/cancellation, bounded responses, real HTTP, headers/consent bodies, redirects and timeouts. The emulator uses a separate `simulation` application ID, loopback-only HTTP endpoint and synthetic location providers. It backgrounds the activity, verifies the screen is off, checks repeated uploads, invokes the actual notification Stop action and checks the HTTP trace for uploads after Stop.
+JVM tests exercise route filtering/segments/limits/GeoJSON plus link validation, monotonic expiry/cancellation, real HTTP, headers, redirects and timeouts. The API 35 emulator uses a separate `simulation` application ID, loopback relay stand-in and synthetic GPS. It verifies the packaged map renders native points, personal recording advances with the screen off, notification Stop halts recording, and no relay request occurs in personal mode. A separate scenario verifies invited sharing, screen-off uploads and revocation with no later upload. External tiles are disabled in simulation.
 
 Only the `liveDebug` APK is uploaded for manual device testing **after** the unit/lint/emulator checks pass. The HTTP-enabled simulation build is never a user artifact. CI success is not a claim that a specific physical phone, OEM battery policy or cellular network has been verified; the next step is the owner's real-device test.
 

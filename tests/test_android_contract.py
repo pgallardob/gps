@@ -44,6 +44,16 @@ class AndroidContractTests(unittest.TestCase):
         source = (ANDROID / "main/java/io/github/pgallardob/punto/MainActivity.kt").read_text(encoding="utf-8")
         self.assertIn("FLAG_SECURE", source)
 
+    def test_default_native_map_is_separate_and_has_no_javascript_command_bridge(self):
+        root = ET.parse(ANDROID / "main/res/layout/activity_main.xml").getroot()
+        views = {view.attrib.get(NS + "id", "").split("/")[-1]: view for view in root.iter()}
+        self.assertNotEqual(views["personal_panel"].attrib.get(NS + "visibility"), "gone")
+        self.assertEqual(views["sharing_panel"].attrib[NS + "visibility"], "gone")
+        renderer = (ANDROID / "main/java/io/github/pgallardob/punto/NativeMap.kt").read_text(encoding="utf-8")
+        self.assertNotIn("addJavascriptInterface(", renderer)
+        for setting in ("allowFileAccess = false", "allowContentAccess = false", "setGeolocationEnabled(false)", "domStorageEnabled = false"):
+            self.assertIn(setting, renderer)
+
     def test_no_native_credential_or_history_persistence_is_added(self):
         source = "\n".join(path.read_text(encoding="utf-8") for path in (ANDROID / "main/java").rglob("*.kt"))
         for denied in ("getSharedPreferences(", "FileOutputStream(", "SQLiteDatabase", "Log.d(", "Log.e(", "PUNTO_OWNER_KEY"):
@@ -68,6 +78,15 @@ class AndroidContractTests(unittest.TestCase):
             file.write_text("\n".join(map(json.dumps, events)), encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "after Stop"):
                 trace.verify(file)
+
+    def test_personal_trace_must_not_contact_the_relay(self):
+        marker = {"event": "request", "routeKey": "relay", "method": "POST", "path": "/__personal_done", "statusCode": 200}
+        events = [{"event": "listening"}, {"event": "request", "routeKey": "relay", "method": "GET", "path": "/v1/invitations/private", "statusCode": 200}, marker]
+        with tempfile.TemporaryDirectory() as directory:
+            file = Path(directory) / "trace.ndjson"
+            file.write_text("\n".join(map(json.dumps, events)), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "Personal mode contacted"):
+                trace.verify(file, with_personal=True)
 
     def test_diagnostic_annotations_redact_credentials_and_escape_commands(self):
         text = 'Bearer private-header {"publisherToken":"private-json", "PUNTO_OWNER_KEY":"private-owner"} #invite=private-link'
