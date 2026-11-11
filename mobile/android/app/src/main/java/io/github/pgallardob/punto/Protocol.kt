@@ -101,7 +101,7 @@ class RelayApi(
             connection.setRequestProperty("Origin", ORIGIN)
             connection.setRequestProperty("Authorization", "Bearer $token")
             connection.setRequestProperty("Accept", "application/json")
-            connection.setRequestProperty("User-Agent", "PuntoAndroid/0.1")
+            connection.setRequestProperty("User-Agent", "PuntoAndroid/0.2")
             connection.setRequestProperty("Accept-Encoding", "identity")
             connection.setRequestProperty("Cache-Control", "no-store")
             if (body != null) {

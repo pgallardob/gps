@@ -12,8 +12,8 @@ android {
         applicationId = "io.github.pgallardob.punto"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0-preview"
+        versionCode = 2
+        versionName = "0.2.0-preview"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { buildConfig = true }
@@ -48,6 +48,7 @@ tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
 }
 
 dependencies {
+    implementation("androidx.webkit:webkit:1.14.0")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20250517")
     testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
@@ -55,3 +56,11 @@ dependencies {
     androidTestImplementation("androidx.test:core:1.7.0")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
 }
+
+val bundledLeaflet = layout.buildDirectory.dir("generated/map-assets")
+val copyMapVendor by tasks.registering(Copy::class) {
+    from(rootProject.file("../../vendor/leaflet"))
+    into(bundledLeaflet.map { it.dir("vendor/leaflet") })
+}
+android.sourceSets.getByName("main").assets.srcDir(bundledLeaflet)
+tasks.named("preBuild").configure { dependsOn(copyMapVendor) }

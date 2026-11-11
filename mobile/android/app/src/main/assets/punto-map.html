@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data: https://tile.openstreetmap.org; connect-src 'none'; object-src 'none'; base-uri 'none'; frame-src 'none'; form-action 'none'">
+    <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+    <link rel="stylesheet" href="map.css">
+    <script src="vendor/leaflet/leaflet.js" defer></script>
+    <script src="map.js" defer></script>
+    <title>Mi mapa · Punto</title>
+</head>
+<body>
+    <div id="map" role="region" aria-label="Mapa de mi ubicación y recorrido"></div>
+    <nav><button id="center" type="button">Centrar</button><button id="route" type="button">Ver recorrido</button></nav>
+</body>
+</html>
