@@ -2,15 +2,17 @@
 
 **Handoff: 2026-11-11.** The owner authorized careful review, GitHub upload and publication. They explicitly requested invitation-free Android personal GPS/map/route recording, with remote sharing separate. They use Windows only and deferred native iOS/macOS/Xcode work. No paid hosting upgrade, signing account or private credential collection is authorized.
 
-## Verified personal-map preview
+## Active repair: restore the original dashboard in Android
 
-Version **0.2.0-preview** at `0ed8d15` passed [Android run 43045975645](https://github.com/pgallardob/gps/actions/runs/43045975645): compilation, JVM tests, lint, packaged map rendering, personal screen-off recording/notification Stop, no personal relay calls and the existing invitation-sharing/Stop HTTP regression. [Download the verified preview ZIP](https://github.com/pgallardob/gps/actions/runs/43045975645/artifacts/13866749889), available until November 18, 2026. This APK includes the default personal map without invitations. Physical-phone background behavior remains unconfirmed.
+The owner rejected **0.2** as visually poor and missing the excellent earlier phone interface/functions. Verified that original `index.html`, CSS and dashboard modules were intact; the new reduced native layout caused the regression. The right-hand pane had incorrectly been left on a bare, tiles-disabled map test. It now shows the complete generated dashboard in a 390 px review viewport.
 
-The owner manually pushed `0ed8d15`. The agent still cannot authenticate a noninteractive push, even after the owner's terminal succeeded. Local commit `5352fb4` adds one-shot-GPS instrumentation and trace-marker tests; it and later handoff updates are not yet pushed. The compiled application sources/Gradle/vendor files are unchanged from the verified APK; only extra tests/docs differ. Do not claim those extra instrumentation assertions have run. `main` remains `ddf6a06`. Before a later main publication, push the extra tests and verify their exact revision. Do not request a password/token or read ignored connection notes to bypass sign-in. No Android SDK/JDK/Gradle is installed locally.
+Branch **`fix/android-dashboard-parity`** contains the **0.3.0-preview candidate**: original dashboard assets, optional native hooks, closed origin/main-frame/page-scoped WebMessage adapter, native GPS/foreground recording, explicit SAF import/export and clipboard writing. Native sharing consent and relay leases are preserved; no owner form is packaged. Review [mobile/android/DASHBOARD.md](mobile/android/DASHBOARD.md). **The new Android build/emulator checks have not run; no corrected APK is ready yet.**
 
-Local checks: Node **83 passed, 1 optional skipped**; Python **45 passed, 7 optional skipped**; isolated relay **18 passed**. Android JVM/lint/instrumentation passed for `0ed8d15`; additional one-shot instrumentation in `5352fb4` has not run. Keep emulator verification distinct from a physical-phone result.
+Local checks: Node **92 passed, 1 optional skipped**; Python **45 passed, 7 optional skipped**; isolated relay **18 passed**. Real Chromium viewport checks at **320/390/800/1280** show no horizontal overflow. Synthetic browser checks cover demo, favorites, goals, GeoJSON import, GPX/GeoJSON preparation, native-shaped background replay/segments/Stop, clipboard acknowledgement, and no resurrection after clear/forget. These are browser/platform-stand-in results, not Android proof. Windows headless Chrome has a minimum outer width: use measured iframe viewports rather than cropped 320 px screenshots.
 
-The exact packaged map assets and vendored Leaflet also rendered synthetic points/segments successfully in Chromium under the packaged CSP, with external tiles disabled. This is browser-renderer evidence only, not proof of Android background behavior.
+One repeat of the unchanged QGIS loopback test encountered Windows `10053` while reading a denied-origin response. Its focused 15-test run and two subsequent full runs passed. Neither the server nor QGIS source/tests changed; the transport cause is not established, and no security check was relaxed to hide it.
+
+The owner could manually push `0ed8d15`, but the agent's noninteractive Git still could not authenticate afterward. Collect and test all changes before requesting another manual push; never request tokens/passwords or read ignored connection notes. `main` is still `ddf6a06`. No local Android SDK/JDK/Gradle is installed. Historical successful [0.2 run 43045975645](https://github.com/pgallardob/gps/actions/runs/43045975645) proved only its narrow GPS checks, not the 0.3 correction or UI parity; do not hand that old APK back as the fix.
 
 ## Current architecture
 
@@ -20,7 +22,7 @@ The exact packaged map assets and vendored Leaflet also rendered synthetic point
 | Relay | https://gps-lj9l.onrender.com — owner-created Free Render service; public build already contains its URL |
 | Secrets | Owner key stays in Render and the owner's runtime browser entry; never in a build variable, native app, chat or private invitation URL |
 | Browser publisher | Foreground-only; startup errors identify GPS/accept/upload and allow deliberate GPS retry only before acceptance |
-| Android | Verified 0.2 personal-map preview at `0ed8d15`, run `43045975645`; real-device test remains. Extra local tests/docs await publication |
+| Android | 0.3 original-dashboard restoration candidate; new Android compilation/emulator/physical-phone checks pending. 0.2 UI rejected |
 | iOS | Native background sender is **not implemented**, explicitly deferred by owner; foreground PWA remains available |
 | Health checks | [Scheduled/manual workflow](https://github.com/pgallardob/gps/actions/workflows/relay-health.yml), nominal max 14-minute gaps; best-effort, not always-on service |
 
@@ -31,7 +33,7 @@ The previous October checkpoint remains available at Git tag `checkpoint-render-
 1. Inspect `git status` and the latest CI run before assuming a build or deployment is complete. Do not recreate Pages or Render or ask if an account exists.
 2. Only **PUNTO_SHARING_API_URL**, the public API origin, belongs in GitHub repository Variables. Never request or display the real owner key, recipient link, phone number or coordinates in agent tools.
 3. Download the Android **live-endpoint preview** only from a successful native workflow. Never distribute the HTTP/synthetic simulation flavor. Debug signing, installation, update limitations and device instructions are in [mobile/README.md](mobile/README.md).
-4. Test the verified 0.2 APK on the owner's Android phone: open **Mi mapa**, locate/start without an invitation, turn the screen off, then use notification Stop and export. For optional remote sharing, use a fresh private invitation and a visible PC viewer. Successful compilation/emulation does not establish behavior on that phone/OEM battery policy.
+4. Finish exact-revision 0.3 CI before providing another APK. Inspect actual formatting and functions, not only GPS counts. Then test the corrected APK on the owner's phone: personal GPS, screen off, resumed route without duplicates, Stop and file operations. Optional sharing still needs a fresh private invitation and visible PC viewer.
 5. Keep the browser sharing behavior separate: its page still stops when hidden, and PWA installation alone does not enable background sharing. Export any unsaved route/favorites before closing/reloading PWA windows for an update.
 6. Review `MONITORING.md` before claiming the 14-minute job is active or keeps Free compute awake. GitHub may delay/drop jobs, disable inactive public-repo schedules, and Render still enforces shared Free hours/restarts.
 

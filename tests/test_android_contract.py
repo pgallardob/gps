@@ -35,6 +35,7 @@ class AndroidContractTests(unittest.TestCase):
         app = manifest.find("application")
         self.assertEqual(app.attrib[NS + "allowBackup"], "false")
         self.assertEqual(app.attrib[NS + "usesCleartextTraffic"], "false")
+        self.assertEqual(app.find("activity").attrib[NS + "launchMode"], "singleTask")
 
     def test_invitation_input_is_not_saved_or_autofilled(self):
         controls = ET.parse(ANDROID / "main/res/layout/activity_main.xml").getroot().iter("EditText")
@@ -44,13 +45,17 @@ class AndroidContractTests(unittest.TestCase):
         source = (ANDROID / "main/java/io/github/pgallardob/punto/MainActivity.kt").read_text(encoding="utf-8")
         self.assertIn("FLAG_SECURE", source)
 
-    def test_default_native_map_is_separate_and_has_no_javascript_command_bridge(self):
+    def test_default_native_map_uses_a_closed_origin_scoped_adapter(self):
         root = ET.parse(ANDROID / "main/res/layout/activity_main.xml").getroot()
         views = {view.attrib.get(NS + "id", "").split("/")[-1]: view for view in root.iter()}
         self.assertNotEqual(views["personal_panel"].attrib.get(NS + "visibility"), "gone")
         self.assertEqual(views["sharing_panel"].attrib[NS + "visibility"], "gone")
         renderer = (ANDROID / "main/java/io/github/pgallardob/punto/NativeMap.kt").read_text(encoding="utf-8")
         self.assertNotIn("addJavascriptInterface(", renderer)
+        self.assertIn("setOf(ORIGIN)", renderer)
+        self.assertIn("isMainFrame", renderer)
+        self.assertIn("sourceOrigin.toString() == ORIGIN", renderer)
+        self.assertIn("view.url == PAGE", renderer)
         for setting in ("allowFileAccess = false", "allowContentAccess = false", "setGeolocationEnabled(false)", "domStorageEnabled = false"):
             self.assertIn(setting, renderer)
 

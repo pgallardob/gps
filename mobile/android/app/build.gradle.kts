@@ -12,8 +12,8 @@ android {
         applicationId = "io.github.pgallardob.punto"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.2.0-preview"
+        versionCode = 3
+        versionName = "0.3.0-preview"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { buildConfig = true }
@@ -57,10 +57,16 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
 }
 
-val bundledLeaflet = layout.buildDirectory.dir("generated/map-assets")
-val copyMapVendor by tasks.registering(Copy::class) {
-    from(rootProject.file("../../vendor/leaflet"))
-    into(bundledLeaflet.map { it.dir("vendor/leaflet") })
+val bundledDashboard = layout.buildDirectory.dir("generated/dashboard-assets")
+val packageDashboard by tasks.registering(Exec::class) {
+    workingDir(rootProject.file("../.."))
+    inputs.files(rootProject.file("../../index.html"), rootProject.file("../../public-files.json"), rootProject.file("../../scripts/build_android_assets.js"))
+    inputs.dir(rootProject.file("../../css"))
+    inputs.dir(rootProject.file("../../js"))
+    inputs.dir(rootProject.file("../../vendor/leaflet"))
+    inputs.dir("src/main/assets")
+    outputs.dir(bundledDashboard)
+    commandLine("node", "scripts/build_android_assets.js", bundledDashboard.get().asFile.absolutePath)
 }
-android.sourceSets.getByName("main").assets.srcDir(bundledLeaflet)
-tasks.named("preBuild").configure { dependsOn(copyMapVendor) }
+android.sourceSets.getByName("main").assets.setSrcDirs(listOf(bundledDashboard))
+tasks.named("preBuild").configure { dependsOn(packageDashboard) }

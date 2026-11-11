@@ -1,28 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="12dp" android:fitsSystemWindows="true">
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
-        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Punto · Mi GPS" android:textStyle="bold" android:textSize="24sp" />
-        <Button android:id="@+id/battery" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Batería" />
-    </LinearLayout>
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-        <Button android:id="@+id/personal_tab" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Mi mapa" />
-        <Button android:id="@+id/sharing_tab" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Compartir (opcional)" />
-    </LinearLayout>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="#f5f8f7" android:fitsSystemWindows="true">
     <LinearLayout android:id="@+id/personal_panel" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="vertical">
-        <TextView android:id="@+id/personal_status" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Tu GPS todavía no está activo. No necesitas una invitación para usar tu mapa." android:accessibilityLiveRegion="polite" />
-        <TextView android:id="@+id/personal_stats" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="0 puntos · 0 km" />
+        <TextView android:id="@+id/native_error" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="20dp" android:visibility="gone" android:accessibilityLiveRegion="polite" />
         <WebView android:id="@+id/map" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:saveEnabled="false" android:importantForAutofill="no" />
-        <CheckBox android:id="@+id/map_pause" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Pausar mapa externo (OpenStreetMap)" />
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-            <Button android:id="@+id/personal_locate" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Obtener mi ubicación" />
-            <Button android:id="@+id/personal_start" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Iniciar recorrido" />
-            <Button android:id="@+id/personal_stop" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Detener" android:enabled="false" />
-        </LinearLayout>
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-            <Button android:id="@+id/personal_export" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Exportar GeoJSON" android:enabled="false" />
-            <Button android:id="@+id/personal_clear" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Borrar" android:enabled="false" />
-        </LinearLayout>
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="El recorrido queda en memoria: expórtalo antes de cerrar. No se envía al servicio de compartir. El mapa externo necesita internet y su proveedor puede inferir la zona que miras." android:textSize="12sp" />
     </LinearLayout>
     <ScrollView android:id="@+id/sharing_panel" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:visibility="gone">
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="12dp">
@@ -35,6 +15,11 @@
             <Button android:id="@+id/start" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/start" android:enabled="false" />
             <Button android:id="@+id/stop" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/stop" android:enabled="false" />
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/privacy" android:paddingTop="16dp" />
+            <Button android:id="@+id/battery" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/battery" />
         </LinearLayout>
     </ScrollView>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="6dp" android:background="#ffffff">
+        <Button android:id="@+id/personal_tab" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:minHeight="48dp" android:text="Mi mapa" android:textAllCaps="false" android:textColor="#ffffff" android:backgroundTint="#087f73" />
+        <Button android:id="@+id/sharing_tab" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:minHeight="48dp" android:text="Compartir (opcional)" android:textAllCaps="false" android:textColor="#06685f" android:backgroundTint="#edf5f1" />
+    </LinearLayout>
 </LinearLayout>

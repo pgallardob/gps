@@ -2,18 +2,20 @@
 
 Punto opens **Mi mapa** without an invitation. It locates the phone and records a personal route using Android's native GPS and a visible **location foreground service**, including while the screen is off. **Compartir (opcional)** is separate: only that mode uses a verified invitation and sends consented positions to the relay. The existing PWA still provides invitation creation and the remote viewer; its web publisher remains foreground-only.
 
+**Current correction: 0.3.0-preview is a candidate, not a verified download yet.** The owner rejected 0.2's reduced interface. Version 0.3 packages the original Punto dashboard and its tools instead of recreating a smaller native UI. See [the adapter boundary](android/DASHBOARD.md). Do not distribute an older APK as if it contains this correction.
+
 ## Install and use the preview
 
-1. Open the latest successful [Android verification run](https://github.com/pgallardob/gps/actions/workflows/android.yml) and download **punto-android-preview**. Extract its APK and install it on your own consenting Android 8+ device. Version **0.2.0-preview** adds the personal map; the old 0.1 preview is invitation-only.
-2. In **Mi mapa**, tap **Obtener mi ubicación** for a single fix, or **Iniciar recorrido** to record. Allow precise location and notifications when requested, then tap Start again. Starting GPS always requires your action.
-3. While recording, you may turn the screen off. Use **Detener** in the app or ongoing notification to stop. **Exportar GeoJSON** saves a snapshot through Android's document picker; export before closing or uninstalling because routes otherwise exist only in RAM.
+1. After the **0.3 source revision** passes the [Android workflow](https://github.com/pgallardob/gps/actions/workflows/android.yml), download its **punto-android-preview** ZIP, extract the APK and install it on your own consenting Android 8+ device. Do not substitute the successful 0.2 build: its UI is the regression being corrected.
+2. In **Mi mapa**, tap **Obtener mi ubicación** for a single fix, or **Iniciar rastreo** to record. Allow precise location and notifications when requested, then tap Start again. Starting GPS always requires your action.
+3. While recording, you may turn the screen off. Use **Detener** in the app or ongoing notification to stop. **Exportar recorrido** uses the selected **GeoJSON/GPX** format through Android's document picker. GeoJSON import, goals, favorites, coordinates, metrics and demo reuse the original dashboard. Export before closing or uninstalling because session data otherwise exists only in RAM.
 
 This is a **debug-signed preview**, not a Play Store release. CI signing keys are ephemeral; installing a later preview may require uninstalling the old one. Stop any active session and export anything you need first. No signing key is checked in.
 
 ## Personal-mode privacy and limits
 
 - No invitation, owner key, PC viewer, relay availability or WhatsApp is needed. Personal mode makes no relay requests. It does not automatically share or silently switch to sharing.
-- Leaflet is bundled locally in a restricted WebView, used only as a renderer. GPS and recording are native, not browser geolocation. No JavaScript-to-native command bridge, file/content access, cookies, DOM storage or arbitrary remote-page navigation is enabled.
+- The original dashboard and Leaflet are bundled locally in a restricted WebView. GPS/recording and document selection remain native. A closed WebMessage adapter checks origin, main frame and exact packaged page before accepting allowlisted device operations; it exposes no arbitrary URLs, paths or native methods. `JavascriptInterface`, browser geolocation, file/content navigation, cookies, DOM storage and remote-page navigation are disabled.
 - External **OpenStreetMap** tiles need internet; the provider can infer the area being viewed. **Pausar mapa externo** disables further tile requests while keeping the point/route overlay. Hiding the map or turning the screen off also pauses new tile requests. Already in-flight requests cannot be withdrawn. No offline tile download or prefetch is provided.
 - Routes are bounded to **10,000 points**, accept accuracy of at most **100 m**, and filter movement below **5 m**. GPS gaps over 30 seconds and separate Start/Stop sessions form separate segments, never a straight line across missing travel. These filters do not guarantee surveyed distance or location authenticity.
 - A point older than **20 seconds** is marked as a previous location, not a fresh fix. Personal recording has no relay consent deadline, but still depends on device power, permissions, GPS and Android/OEM policy. Export before the process is killed; no automatic disk history or recovery is implemented.
@@ -37,15 +39,17 @@ Recording and invitation sharing are mutually exclusive. Sharing accepts only th
 
 Only a successful workflow for the **current source revision** establishes compilation, JVM tests, lint and emulator verification. Earlier successful 0.1 runs verify the sender-only preview, not this personal-map feature. Physical-device confirmation remains a separate step.
 
-[Run 43045975645](https://github.com/pgallardob/gps/actions/runs/43045975645) passed all checks for version **0.2.0-preview** at `0ed8d15`, including packaged map rendering, personal recording with the screen off, notification Stop, zero personal relay requests and the existing invitation-sharing regression. [Its preview ZIP](https://github.com/pgallardob/gps/actions/runs/43045975645/artifacts/13866749889) expires November 18, 2026. Additional one-shot instrumentation in later local commit `5352fb4` is not part of that observed run; the compiled application code is unchanged. Do not confuse that extra test coverage with already observed results.
+[Run 43045975645](https://github.com/pgallardob/gps/actions/runs/43045975645) passed the **0.2 GPS tests** at `0ed8d15`, but did not establish visual or feature parity; the owner rejected that UI. It is historical evidence, not verification of the 0.3 correction. The new adapter and dashboard require a fresh Android run.
+
+The 0.3 candidate has local Node/Python checks plus real Chromium reviews of the generated dashboard at 320/390/800/1280 px. Synthetic browser scenarios cover demo, favorites, goals, import, GPX/GeoJSON preparation, native-shaped screen-off replay without duplicates and clear/forget behavior. These are not native Android or physical-phone results.
 
 The workflow pins Java 17, Gradle 8.13, AGP 8.12.0 and Kotlin 2.3.0. It uses standard public Ubuntu 24.04 runners, basic GitHub caching, no paid Gradle service, no signing account and no real GPS or secrets. The Android SDK is installed only on the disposable runner, not the owner's Windows PC. Compiler/test failures publish bounded, redacted annotations so diagnosis does not require collecting credentials or exposing environment dumps.
 
-JVM tests exercise route filtering/segments/limits/GeoJSON plus link validation, monotonic expiry/cancellation, real HTTP, headers, redirects and timeouts. The API 35 emulator uses a separate `simulation` application ID, loopback relay stand-in and synthetic GPS. It verifies a one-shot fix does not start recording, the packaged map renders native points, personal recording advances with the screen off, notification Stop halts recording, and no relay request occurs in personal mode. A separate scenario verifies invited sharing, screen-off uploads and revocation with no later upload. External tiles are disabled in simulation.
+JVM tests exercise route filtering/segments/limits/GeoJSON plus link validation, monotonic expiry/cancellation, real HTTP, headers, redirects and timeouts. The API 35 emulator uses a separate `simulation` application ID, loopback relay stand-in and synthetic GPS. Its scenarios cover one-shot location, the actual dashboard, screen-off recording/replay, notification Stop, zero personal relay requests, demo/favorites/document-picker cancellation and invited-sharing regression. These updated scenarios are pending execution for 0.3. External tiles are disabled in simulation.
 
 Only the `liveDebug` APK is uploaded for manual device testing **after** the unit/lint/emulator checks pass. The HTTP-enabled simulation build is never a user artifact. CI success is not a claim that a specific physical phone, OEM battery policy or cellular network has been verified; the next step is the owner's real-device test.
 
-For an existing Android SDK/JDK development environment, run from the repository root:
+For an existing Android SDK/JDK and Node.js development environment, run from the repository root:
 
 ```text
 gradle -p mobile/android testLiveDebugUnitTest lintLiveDebug assembleLiveDebug

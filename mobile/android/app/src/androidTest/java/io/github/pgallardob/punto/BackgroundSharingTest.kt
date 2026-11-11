@@ -1,7 +1,11 @@
 package io.github.pgallardob.punto
 
 import android.Manifest
+import android.app.Activity
+import android.app.Instrumentation
 import android.app.NotificationManager
+import android.content.Intent
+import android.content.IntentFilter
 import android.location.Criteria
 import android.location.Location
 import android.location.LocationManager
@@ -9,6 +13,7 @@ import android.os.ParcelFileDescriptor
 import android.os.PowerManager
 import android.os.SystemClock
 import android.view.View
+import android.view.accessibility.AccessibilityNodeInfo
 import android.webkit.WebView
 import android.widget.Button
 import android.widget.CheckBox
@@ -17,6 +22,7 @@ import android.widget.TextView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.lifecycle.Lifecycle
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.*
@@ -29,7 +35,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 @RunWith(AndroidJUnit4::class)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
@@ -108,17 +114,17 @@ class BackgroundSharingTest {
             .first { it.title.toString() == "Detener" }.actionIntent.send()
         await("Foreground session did not stop") { !SessionStatus.current.active }
     }
-    private fun mapHasRoute(scenario: ActivityScenario<MainActivity>): Boolean {
+    private fun javascript(scenario: ActivityScenario<MainActivity>, script: String): String {
         val latch = CountDownLatch(1)
-        val ready = AtomicBoolean(false)
+        val value = AtomicReference("")
         scenario.onActivity { activity ->
-            activity.findViewById<WebView>(R.id.map).evaluateJavascript(
-                "Boolean(window.PuntoMapState && window.PuntoMapState.hasPosition && window.PuntoMapState.routePoints >= 2)"
-            ) { ready.set(it == "true"); latch.countDown() }
+            activity.findViewById<WebView>(R.id.map).evaluateJavascript(script) { value.set(it); latch.countDown() }
         }
         assertTrue("Map readiness callback timed out", latch.await(3, TimeUnit.SECONDS))
-        return ready.get()
+        return value.get()
     }
+    private fun mapHasRoute(scenario: ActivityScenario<MainActivity>) = javascript(scenario,
+        "Boolean(window.PuntoNative && Number(document.getElementById('point-count').textContent) >= 2 && document.querySelector('#map .leaflet-interactive'))") == "true"
 
     @Test fun a_personalMapTracksWithoutInvitationWithScreenOffAndNoRelayRequests() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -126,19 +132,18 @@ class BackgroundSharingTest {
                 assertEquals(View.VISIBLE, it.findViewById<View>(R.id.personal_panel).visibility)
                 assertEquals(View.GONE, it.findViewById<View>(R.id.sharing_panel).visibility)
                 assertEquals(0, it.findViewById<EditText>(R.id.invitation).text.length)
-                assertTrue(it.findViewById<Button>(R.id.personal_start).isEnabled)
                 assertFalse(SessionStatus.current.active)
-                it.findViewById<Button>(R.id.personal_locate).performClick()
-                assertFalse(it.findViewById<Button>(R.id.personal_start).isEnabled)
             }
+            await("Full packaged dashboard not ready") { javascript(scenario, "Boolean(window.PuntoNative && window.PuntoNative.ready && document.getElementById('waypoint-list') && document.getElementById('import-btn'))") == "true" }
+            assertEquals("true", javascript(scenario, "document.documentElement.scrollWidth <= window.innerWidth"))
+            javascript(scenario, "document.getElementById('locate-btn').click()")
+            assertEquals("true", javascript(scenario, "document.getElementById('start-btn').disabled"))
             position(0.0)
             await("One-shot location did not reach the map") { PersonalData.current != null }
             assertFalse(SessionStatus.current.active)
             assertEquals(0, PersonalData.route.snapshot().count)
-            scenario.onActivity {
-                assertTrue(it.findViewById<Button>(R.id.personal_start).isEnabled)
-                it.findViewById<Button>(R.id.personal_start).performClick()
-            }
+            await("One-shot controls did not recover") { javascript(scenario, "!document.getElementById('start-btn').disabled") == "true" }
+            javascript(scenario, "document.getElementById('start-btn').click()")
             await("Personal location did not start") { SessionStatus.current.mode == SessionMode.PERSONAL && SessionStatus.current.active && PersonalData.route.snapshot().recording }
             position(0.0)
             await("No first local point") { PersonalData.route.snapshot().count >= 1 }
@@ -158,6 +163,12 @@ class BackgroundSharingTest {
             Thread.sleep(11000)
             assertEquals(stopped, PersonalData.route.snapshot().count)
             assertEquals("FeatureCollection", JSONObject(PersonalData.route.geoJson(true)).getString("type"))
+            shell("input keyevent KEYCODE_WAKEUP")
+            scenario.moveToState(Lifecycle.State.RESUMED)
+            await("Screen-off points did not return to the full dashboard") {
+                javascript(scenario, "Number(document.getElementById('point-count').textContent) === $stopped") == "true"
+            }
+            assertEquals("true", javascript(scenario, "!document.getElementById('start-btn').disabled"))
         }
         // Harness-only marker: host verification rejects any relay API request before this point.
         request("__personal_done", "POST")
@@ -196,6 +207,40 @@ class BackgroundSharingTest {
             position(0.01)
             Thread.sleep(11000)
             assertTrue(request("v1/sessions/$id", token = viewer).isNull("point"))
+        }
+    }
+
+    @Test fun c_dashboardToolsKeepTheirStyleAndDoNotStartGpsInDemo() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            await("Dashboard tools not ready") { javascript(scenario, "Boolean(window.PuntoNative && window.PuntoNative.ready && document.getElementById('demo-btn'))") == "true" }
+            assertEquals("true", javascript(scenario, "getComputedStyle(document.body).backgroundColor === 'rgb(245, 248, 247)'"))
+            javascript(scenario, "document.getElementById('demo-btn').click(); document.getElementById('stop-btn').click()")
+            assertFalse(SessionStatus.current.active)
+            assertEquals("true", javascript(scenario, "Number(document.getElementById('point-count').textContent) > 0 && !document.getElementById('demo-banner').hidden"))
+            javascript(scenario, "document.getElementById('waypoint-name').value = 'Synthetic favorite'; document.getElementById('save-waypoint-btn').click()")
+            assertEquals("1", javascript(scenario, "document.getElementById('waypoint-list').children.length"))
+            javascript(scenario, "document.getElementById('copy-btn').click()")
+            await("Native clipboard acknowledgement did not reach the dashboard") { javascript(scenario, "document.getElementById('action-feedback').textContent.includes('SIMULADAS copiadas')") == "true" }
+            val exportMonitor = instrumentation.addMonitor(IntentFilter(Intent.ACTION_CREATE_DOCUMENT), Instrumentation.ActivityResult(Activity.RESULT_CANCELED, null), true)
+            try {
+                javascript(scenario, "document.getElementById('export-format').value = 'gpx'; document.getElementById('export-btn').click()")
+                await("GPX export did not reach the Android document picker") { exportMonitor.hits > 0 }
+                await("Export cancellation was not reported") { javascript(scenario, "document.getElementById('action-feedback').textContent.includes('cancelada')") == "true" }
+            } finally { instrumentation.removeMonitor(exportMonitor) }
+            val importMonitor = instrumentation.addMonitor(IntentFilter(Intent.ACTION_OPEN_DOCUMENT), Instrumentation.ActivityResult(Activity.RESULT_CANCELED, null), true)
+            try {
+                javascript(scenario, "document.getElementById('import-btn').click()")
+                await("Import did not reach the Android document picker") { importMonitor.hits > 0 }
+                assertEquals("1", javascript(scenario, "document.getElementById('waypoint-list').children.length"))
+            } finally { instrumentation.removeMonitor(importMonitor) }
+            javascript(scenario, "document.getElementById('forget-btn').click()")
+            await("Native confirmation dialog not reachable") {
+                instrumentation.uiAutomation.rootInActiveWindow?.findAccessibilityNodeInfosByText("Continuar")
+                    ?.firstOrNull()?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true
+            }
+            await("Forget did not clear the dashboard") { PersonalData.current == null && javascript(scenario, "Number(document.getElementById('point-count').textContent) === 0 && document.getElementById('waypoint-list').children.length === 0") == "true" }
+            assertFalse(SessionStatus.current.active)
+            assertNull(PersonalData.current)
         }
     }
 }

@@ -16,7 +16,7 @@ fun Activity.locationReady(ongoing: Boolean, precise: Boolean, report: (String) 
         val permissions = mutableListOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION)
         if (ongoing && Build.VERSION.SDK_INT >= 33) permissions.add(Manifest.permission.POST_NOTIFICATIONS)
         requestPermissions(permissions.toTypedArray(), 42)
-        report(if (precise) "Permite ubicación precisa y notificaciones; después vuelve a pulsar Iniciar recorrido."
+        report(if (precise) "Permite ubicación precisa y notificaciones; después vuelve a pulsar Iniciar rastreo."
             else "Concede los permisos solicitados y vuelve a pulsar el botón. No se inicia GPS automáticamente.")
         return false
     }
