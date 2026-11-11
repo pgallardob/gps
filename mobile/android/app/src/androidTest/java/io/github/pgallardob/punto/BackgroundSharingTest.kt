@@ -126,6 +126,17 @@ class BackgroundSharingTest {
     private fun mapHasRoute(scenario: ActivityScenario<MainActivity>) = javascript(scenario,
         "Boolean(window.PuntoNative && Number(document.getElementById('point-count').textContent) >= 2 && document.querySelector('#map .leaflet-interactive'))") == "true"
 
+    private fun documentMonitor(action: String, mime: String): Instrumentation.ActivityMonitor {
+        val filter = IntentFilter(action).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            addDataType(mime)
+        }
+        val expected = Intent(action).addCategory(Intent.CATEGORY_OPENABLE).setType(mime)
+        assertTrue("The monitor must match the document intent including its MIME type and category",
+            filter.match(context.contentResolver, expected, true, "PuntoTest") >= 0)
+        return instrumentation.addMonitor(filter, Instrumentation.ActivityResult(Activity.RESULT_CANCELED, null), true)
+    }
+
     @Test fun a_personalMapTracksWithoutInvitationWithScreenOffAndNoRelayRequests() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
@@ -164,7 +175,10 @@ class BackgroundSharingTest {
             assertEquals(stopped, PersonalData.route.snapshot().count)
             assertEquals("FeatureCollection", JSONObject(PersonalData.route.geoJson(true)).getString("type"))
             shell("input keyevent KEYCODE_WAKEUP")
-            scenario.moveToState(Lifecycle.State.RESUMED)
+            shell("wm dismiss-keyguard")
+            // Reopen the existing singleTask activity as a user would; lifecycle requests do not foreground a task.
+            shell("am start -W -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n ${context.packageName}/io.github.pgallardob.punto.MainActivity")
+            await("The launcher did not bring Punto back to the foreground") { scenario.state == Lifecycle.State.RESUMED }
             await("Screen-off points did not return to the full dashboard") {
                 javascript(scenario, "Number(document.getElementById('point-count').textContent) === $stopped") == "true"
             }
@@ -221,23 +235,28 @@ class BackgroundSharingTest {
             assertEquals("1", javascript(scenario, "document.getElementById('waypoint-list').children.length"))
             javascript(scenario, "document.getElementById('copy-btn').click()")
             await("Native clipboard acknowledgement did not reach the dashboard") { javascript(scenario, "document.getElementById('action-feedback').textContent.includes('SIMULADAS copiadas')") == "true" }
-            val exportMonitor = instrumentation.addMonitor(IntentFilter(Intent.ACTION_CREATE_DOCUMENT), Instrumentation.ActivityResult(Activity.RESULT_CANCELED, null), true)
+            val exportMonitor = documentMonitor(Intent.ACTION_CREATE_DOCUMENT, "application/gpx+xml")
             try {
                 javascript(scenario, "document.getElementById('export-format').value = 'gpx'; document.getElementById('export-btn').click()")
                 await("GPX export did not reach the Android document picker") { exportMonitor.hits > 0 }
                 await("Export cancellation was not reported") { javascript(scenario, "document.getElementById('action-feedback').textContent.includes('cancelada')") == "true" }
             } finally { instrumentation.removeMonitor(exportMonitor) }
-            val importMonitor = instrumentation.addMonitor(IntentFilter(Intent.ACTION_OPEN_DOCUMENT), Instrumentation.ActivityResult(Activity.RESULT_CANCELED, null), true)
+            val importMonitor = documentMonitor(Intent.ACTION_OPEN_DOCUMENT, "*/*")
             try {
                 javascript(scenario, "document.getElementById('import-btn').click()")
                 await("Import did not reach the Android document picker") { importMonitor.hits > 0 }
                 assertEquals("1", javascript(scenario, "document.getElementById('waypoint-list').children.length"))
             } finally { instrumentation.removeMonitor(importMonitor) }
-            javascript(scenario, "document.getElementById('forget-btn').click()")
+            val confirmationFinished = CountDownLatch(1)
+            scenario.onActivity { activity ->
+                // confirm() suspends JavaScript; click the native dialog before waiting for evaluation to finish.
+                activity.findViewById<WebView>(R.id.map).evaluateJavascript("document.getElementById('forget-btn').click()") { confirmationFinished.countDown() }
+            }
             await("Native confirmation dialog not reachable") {
                 instrumentation.uiAutomation.rootInActiveWindow?.findAccessibilityNodeInfosByText("Continuar")
                     ?.firstOrNull()?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true
             }
+            assertTrue("JavaScript did not resume after the native confirmation", confirmationFinished.await(5, TimeUnit.SECONDS))
             await("Forget did not clear the dashboard") { PersonalData.current == null && javascript(scenario, "Number(document.getElementById('point-count').textContent) === 0 && document.getElementById('waypoint-list').children.length === 0") == "true" }
             assertFalse(SessionStatus.current.active)
             assertNull(PersonalData.current)

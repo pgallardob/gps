@@ -136,6 +136,16 @@ class AndroidContractTests(unittest.TestCase):
         self.assertIn("connectedSimulationDebugAndroidTest", shell)
         self.assertIn("check_android_trace.py", shell)
 
+    def test_dashboard_fixture_matches_document_types_and_does_not_wait_on_an_open_confirm(self):
+        fixture = (ANDROID / "androidTest/java/io/github/pgallardob/punto/BackgroundSharingTest.kt").read_text(encoding="utf-8")
+        self.assertIn("addCategory(Intent.CATEGORY_OPENABLE)", fixture)
+        self.assertIn("addDataType(mime)", fixture)
+        self.assertIn('documentMonitor(Intent.ACTION_CREATE_DOCUMENT, "application/gpx+xml")', fixture)
+        self.assertIn("android.intent.category.LAUNCHER", fixture)
+        self.assertNotIn("scenario.moveToState(Lifecycle.State.RESUMED)", fixture)
+        self.assertNotIn('javascript(scenario, "document.getElementById(\'forget-btn\').click()")', fixture)
+        self.assertLess(fixture.index('findAccessibilityNodeInfosByText("Continuar")'), fixture.index("confirmationFinished.await"))
+
     def test_successful_build_is_not_reported_as_a_compilation_failure(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
