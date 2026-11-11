@@ -74,6 +74,12 @@ class AndroidContractTests(unittest.TestCase):
             file.write_text("\n".join(map(json.dumps, events)), encoding="utf-8")
             with contextlib.redirect_stdout(io.StringIO()):
                 trace.verify(file)
+            marker = {"event": "request", "routeKey": "relay", "method": "POST", "path": "/__personal_done", "statusCode": 200}
+            reset = {"event": "request", "routeKey": "relay", "method": "POST", "path": "/__reset", "statusCode": 200}
+            personal_events = [events[0], reset, marker] + events[1:]
+            file.write_text("\n".join(map(json.dumps, personal_events)), encoding="utf-8")
+            with contextlib.redirect_stdout(io.StringIO()):
+                trace.verify(file, with_personal=True)
             events.append({"event": "request", "routeKey": "relay", "method": "PUT", "path": session + "/position", "statusCode": 410})
             file.write_text("\n".join(map(json.dumps, events)), encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "after Stop"):
@@ -86,6 +92,13 @@ class AndroidContractTests(unittest.TestCase):
             file = Path(directory) / "trace.ndjson"
             file.write_text("\n".join(map(json.dumps, events)), encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "Personal mode contacted"):
+                trace.verify(file, with_personal=True)
+
+    def test_personal_trace_requires_its_successful_completion_marker(self):
+        with tempfile.TemporaryDirectory() as directory:
+            file = Path(directory) / "trace.ndjson"
+            file.write_text(json.dumps({"event": "listening"}), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "personal no-invitation test did not finish"):
                 trace.verify(file, with_personal=True)
 
     def test_diagnostic_annotations_redact_credentials_and_escape_commands(self):

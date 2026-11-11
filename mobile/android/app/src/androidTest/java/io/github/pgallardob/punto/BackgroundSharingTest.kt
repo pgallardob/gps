@@ -127,9 +127,19 @@ class BackgroundSharingTest {
                 assertEquals(View.GONE, it.findViewById<View>(R.id.sharing_panel).visibility)
                 assertEquals(0, it.findViewById<EditText>(R.id.invitation).text.length)
                 assertTrue(it.findViewById<Button>(R.id.personal_start).isEnabled)
+                assertFalse(SessionStatus.current.active)
+                it.findViewById<Button>(R.id.personal_locate).performClick()
+                assertFalse(it.findViewById<Button>(R.id.personal_start).isEnabled)
+            }
+            position(0.0)
+            await("One-shot location did not reach the map") { PersonalData.current != null }
+            assertFalse(SessionStatus.current.active)
+            assertEquals(0, PersonalData.route.snapshot().count)
+            scenario.onActivity {
+                assertTrue(it.findViewById<Button>(R.id.personal_start).isEnabled)
                 it.findViewById<Button>(R.id.personal_start).performClick()
             }
-            await("Personal location did not start") { SessionStatus.current.mode == SessionMode.PERSONAL && SessionStatus.current.text.startsWith("Obteniendo ubicación.") }
+            await("Personal location did not start") { SessionStatus.current.mode == SessionMode.PERSONAL && SessionStatus.current.active && PersonalData.route.snapshot().recording }
             position(0.0)
             await("No first local point") { PersonalData.route.snapshot().count >= 1 }
             Thread.sleep(5500)
