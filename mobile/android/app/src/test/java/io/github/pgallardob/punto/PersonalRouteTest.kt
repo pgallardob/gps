@@ -93,4 +93,15 @@ class PersonalRouteTest {
         assertEquals(1, first.segments.single().size)
         assertEquals("RouteSnapshot([redacted])", first.toString())
     }
+
+    @Test fun explicitDashboardClearCanBeginANewSegmentWithoutSilentlyStoppingGps() {
+        val route = PersonalRoute()
+        route.begin()
+        route.add(point(0.0, 1000), 1000)
+        route.clear(restartSegment = true)
+        assertTrue(route.snapshot().recording)
+        assertEquals(0, route.snapshot().count)
+        assertTrue(route.add(point(1.0, 6000), 6000))
+        assertEquals(0.0, route.snapshot().distanceMeters, 0.0)
+    }
 }

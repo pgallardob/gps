@@ -39,7 +39,7 @@ data class Preview(val remainingSeconds: Int)
 data class Acceptance(val token: String, val remainingSeconds: Int) {
     override fun toString() = "Acceptance([redacted])"
 }
-data class Fix(val latitude: Double, val longitude: Double, val accuracy: Double, val elapsedMillis: Long) {
+data class Fix(val latitude: Double, val longitude: Double, val accuracy: Double, val elapsedMillis: Long, val speed: Double? = null) {
     override fun toString() = "Fix([redacted])"
     fun coordinatesValid() = latitude.isFinite() && longitude.isFinite() && accuracy.isFinite() &&
         latitude in -90.0..90.0 && longitude in -180.0..180.0 && accuracy in 0.0..20000000.0
@@ -101,7 +101,7 @@ class RelayApi(
             connection.setRequestProperty("Origin", ORIGIN)
             connection.setRequestProperty("Authorization", "Bearer $token")
             connection.setRequestProperty("Accept", "application/json")
-            connection.setRequestProperty("User-Agent", "PuntoAndroid/0.2")
+            connection.setRequestProperty("User-Agent", "PuntoAndroid/0.3")
             connection.setRequestProperty("Accept-Encoding", "identity")
             connection.setRequestProperty("Cache-Control", "no-store")
             if (body != null) {

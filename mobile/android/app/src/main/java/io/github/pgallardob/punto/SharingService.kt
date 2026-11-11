@@ -149,6 +149,7 @@ class SharingService : Service(), LocationListener {
         if (gate.stopped) return
         try {
             gate.check()
+            PersonalData.allowGps()
             val fine = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
             val coarse = checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
             if (!fine && !coarse) throw ShareFailure("permission", Step.LOCATION)
@@ -173,7 +174,8 @@ class SharingService : Service(), LocationListener {
 
     override fun onLocationChanged(location: Location) {
         if (gate.stopped) return
-        val fix = Fix(location.latitude, location.longitude, location.accuracy.toDouble(), location.elapsedRealtimeNanos / 1000000)
+        val fix = Fix(location.latitude, location.longitude, location.accuracy.toDouble(), location.elapsedRealtimeNanos / 1000000,
+            location.speed.toDouble().takeIf { location.hasSpeed() && it.isFinite() && it in 0.0..1000.0 })
         try { fix.validate(SystemClock.elapsedRealtime()) } catch (_: ShareFailure) { return }
         latest.set(fix)
         PersonalData.accept(fix, record = mode == SessionMode.PERSONAL)

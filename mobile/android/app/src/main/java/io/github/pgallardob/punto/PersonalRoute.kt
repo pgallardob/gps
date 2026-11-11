@@ -32,8 +32,8 @@ class PersonalRoute(private val limit: Int = 10000) {
     }
     @Synchronized fun stop() { recording = false; segment = null }
     @Synchronized fun gap() { segment = null }
-    @Synchronized fun clear() {
-        check(!recording) { "Stop the route before clearing it" }
+    @Synchronized fun clear(restartSegment: Boolean = false) {
+        check(!recording || restartSegment) { "Stop the route before clearing it" }
         segments.clear(); segment = null; distance = 0.0; count = 0; lastElapsed = null
     }
     @Synchronized fun add(fix: Fix, timestampMillis: Long): Boolean {
